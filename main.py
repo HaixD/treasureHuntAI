@@ -40,6 +40,13 @@ class GridApp:
         )
         self.canvas.pack()
 
+        self.regenerate_button = tk.Button(
+            self.root,
+            text="Regenerate",
+            command=self.regenerate_grid
+        )
+        self.regenerate_button.pack()
+
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
@@ -93,6 +100,10 @@ class GridApp:
                         font=("Arial", int(self.cell_size / 2), "bold"),
                         fill="black"
                     )
+
+    def regenerate_grid(self):
+        self.grid = self.create_grid()
+        self.draw_grid()
 
     def run(self):
         self.root.mainloop()
