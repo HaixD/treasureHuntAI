@@ -109,5 +109,5 @@ class GridApp:
         self.root.mainloop()
 
 if __name__ == "__main__":
-    app = GridApp(size=8, wall_total=10)
+    app = GridApp(size=10, wall_total=10)
     app.run()
