@@ -51,7 +51,10 @@ class GridApp:
         self.regenerate_button.pack()
 
         # Draw grid
-        self.grid = self.create_grid()
+        self.grid, start_pos = self.create_grid()
+
+        self.DFS_path = self.DFS(start_pos)
+        
         self.draw_grid()
 
     def create_grid(self):
@@ -87,7 +90,7 @@ class GridApp:
             start_pos = (random.randrange(self.size), random.randrange(self.size))
         grid[start_pos] = self.START
 
-        return grid
+        return grid, start_pos
 
     def draw_grid(self):
         self.canvas.delete("all")
@@ -97,6 +100,10 @@ class GridApp:
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 value = self.grid[r, c]
                 color = self.COLORS[value]
+
+                # draw path
+                if (r, c) in self.DFS_path:
+                    color = "red"
 
                 # Draw background
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
@@ -116,6 +123,36 @@ class GridApp:
 
     def run(self):
         self.root.mainloop()
+
+
+    def expand(self, row, col):
+        if row + 1 in range(0, self.size): 
+            yield (row + 1, col)
+        if row - 1 in range(0, self.size): 
+            yield (row - 1, col)
+        if col + 1 in range(0, self.size): 
+            yield (row, col + 1)
+        if col - 1 in range(0, self.size): 
+            yield (row, col - 1)
+
+    def DFS(self, position, path=None):
+        path = path or set()
+        r, c = position
+
+        if self.grid[r, c] == self.WALL:       # invalid position
+            return
+        elif position in path:                 # already visited (avoid loops)
+            return
+        elif self.grid[r, c] == self.TREASURE: # found treasure
+            path.add(position)
+            return path.copy()
+        
+        path.add(position)
+        for cell in self.expand(r, c):
+            result = self.DFS(cell, path)
+            if result is not None:
+                return result
+        path.remove(position)
 
 if __name__ == "__main__":
     app = GridApp(size=10, wall_total=10)
