@@ -1,6 +1,7 @@
 import tkinter as tk
 import numpy as np
 import random
+import heapq
 
 class GridApp:
     def __init__(self, size=10, wall_total=10, cell_size=50):
@@ -14,6 +15,7 @@ class GridApp:
         self.TREASURE = 2
         self.TRAP = 3
         self.START = 4
+        self.PATH = 5
 
         # Grid colors
         self.COLORS = {
@@ -21,7 +23,8 @@ class GridApp:
             self.WALL: "gold",
             self.TREASURE: "pink",
             self.TRAP: "sky blue",
-            self.START: "light green"
+            self.START: "light green",
+            self.PATH: "gray"
         }
 
         # Grid symbols
@@ -43,12 +46,10 @@ class GridApp:
         )
         self.canvas.pack()
 
-        self.regenerate_button = tk.Button(
-            self.root,
-            text="Regenerate",
-            command=self.regenerate_grid
-        )
-        self.regenerate_button.pack()
+        tk.Button(self.root, text="Regenerate", command=self.regenerate_grid).pack()
+        tk.Button(self.root, text="Run BFS", command=self.run_bfs).pack()
+        tk.Button(self.root, text="Run DFS", command=self.run_dfs).pack()
+        tk.Button(self.root, text="Run UCS", command=self.run_ucs).pack()
 
         # Draw grid
         self.grid, start_pos = self.create_grid()
@@ -90,7 +91,137 @@ class GridApp:
             start_pos = (random.randrange(self.size), random.randrange(self.size))
         grid[start_pos] = self.START
 
-        return grid, start_pos
+        self.start_pos = start_pos
+        self.treasure_pos = treasure_pos
+
+        self.start_pos = start_pos
+        self.treasure_pos = treasure_pos
+
+        return grid
+
+    # Return valid neighbors for a given position.
+    def get_neighbors(self, pos):
+        r, c = pos
+        moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
+        valid_neighbors = []
+        for nr, nc in moves:
+            if 0 <= nr < self.size and 0 <= nc < self.size:
+                if self.grid[nr, nc] not in [self.WALL, self.TRAP]:
+                    valid_neighbors.append((nr, nc))
+        return valid_neighbors
+
+    def bfs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_bfs(self):
+        path = self.bfs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
+
+    def dfs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_dfs(self):
+        path = self.dfs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
+
+    def ucs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_ucs(self):
+        path = self.ucs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
+
+    # Return valid neighbors for a given position.
+    def get_neighbors(self, pos):
+        r, c = pos
+        moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
+        valid_neighbors = []
+        for nr, nc in moves:
+            if 0 <= nr < self.size and 0 <= nc < self.size:
+                if self.grid[nr, nc] not in [self.WALL, self.TRAP]:
+                    valid_neighbors.append((nr, nc))
+        return valid_neighbors
+
+    def bfs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_bfs(self):
+        path = self.bfs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
+
+    def dfs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_dfs(self):
+        path = self.dfs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
+
+    def ucs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_ucs(self):
+        path = self.ucs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid()
 
     def draw_grid(self):
         self.canvas.delete("all")
