@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 class GridApp:
-    def __init__(self, size=8, wall_total=10, cell_size=50):
+    def __init__(self, size=10, wall_total=10, cell_size=50):
         self.size = size
         self.wall_total = wall_total
         self.cell_size = cell_size
@@ -13,20 +13,23 @@ class GridApp:
         self.WALL = 1
         self.TREASURE = 2
         self.TRAP = 3
+        self.START = 4
 
         # Grid colors
         self.COLORS = {
             self.EMPTY: "white",
             self.WALL: "gold",
             self.TREASURE: "pink",
-            self.TRAP: "sky blue"
+            self.TRAP: "sky blue",
+            self.START: "light green"
         }
 
         # Grid symbols
         self.SYMBOLS = {
             self.WALL: "#",
             self.TREASURE: "T",
-            self.TRAP: "X"
+            self.TRAP: "X",
+            self.START: "S"
         }
 
         # Initialize GUI
@@ -77,6 +80,12 @@ class GridApp:
             if grid[r, c] == self.EMPTY:
                 grid[r, c] = self.WALL
                 wall_count += 1
+
+        # Place start
+        start_pos = (random.randrange(self.size), random.randrange(self.size))
+        while start_pos in [treasure_pos, trap_pos]:
+            start_pos = (random.randrange(self.size), random.randrange(self.size))
+        grid[start_pos] = self.START
 
         return grid
 
