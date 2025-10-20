@@ -2,6 +2,7 @@ import tkinter as tk
 import numpy as np
 import random
 import heapq
+from collections import deque
 
 class GridApp:
     def __init__(self, size=10, wall_total=10, cell_size=50):
@@ -107,8 +108,25 @@ class GridApp:
         return valid_neighbors
 
     def bfs(self, start, goal):
-        # TODO: Implementation
-        pass
+        queue = deque([[self.start_pos]])
+        visited = {self.start_pos}
+
+        while queue:
+            path = queue.popleft()
+            position = path[-1]
+
+            if self.grid[position[0], position[1]] == self.TREASURE:
+                return path
+
+            for neighbor in self.get_neighbors(position):
+                nr, nc = neighbor
+                if neighbor not in visited and self.grid[nr, nc] != self.WALL:
+                    visited.add(neighbor)
+                    new_path = list(path)
+                    new_path.append(neighbor)
+                    queue.append(new_path)
+        return None
+
 
     def run_bfs(self):
         self.clear_path()
