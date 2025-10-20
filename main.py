@@ -242,6 +242,7 @@ class GridApp:
         cells_expanded = 0
 
         while pq:
+            # Get next best cost and position from priority queue
             current_cost, current_pos = heapq.heappop(pq)
 
             # Skip current position if already visited
@@ -261,7 +262,7 @@ class GridApp:
                     current_pos = parent[current_pos]
                 return path[::-1], cells_expanded
 
-            # Explore neighbors and get their costs
+            # Otherwise, explore neighbors and get their costs
             for neighbor in self.get_neighbors(current_pos):
                 new_cost = current_cost + 1
 
