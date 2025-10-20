@@ -39,7 +39,6 @@ class GridApp:
             self.START: "S"
         }
 
-        # Animation settings
         self.animation_speed = 25  # milliseconds between steps
         self.is_animating = False
 
@@ -121,13 +120,13 @@ class GridApp:
         return grid
 
     # Return valid neighbors for a given position
-    def get_neighbors(self, pos):
+    def get_neighbors(self, pos, include_traps=False):
         r, c = pos
         moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
         valid_neighbors = []
         for nr, nc in moves:
             if 0 <= nr < self.size and 0 <= nc < self.size:
-                if self.grid[nr, nc] not in [self.WALL, self.TRAP]:
+                if not include_traps and self.grid[nr, nc] not in [self.WALL, self.TRAP] or include_traps and self.grid[nr, nc] not in [self.WALL]:
                     valid_neighbors.append((nr, nc))
         return valid_neighbors
 
@@ -249,7 +248,7 @@ class GridApp:
                 return path[::-1], cells_expanded
 
             # Otherwise, explore neighbors and get their costs
-            for neighbor in self.get_neighbors(current_pos):
+            for neighbor in self.get_neighbors(current_pos, include_traps=True):
                 new_cost = current_cost + 1
 
                 # Update if this is a better path to neighbor
