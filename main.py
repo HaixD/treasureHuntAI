@@ -2,6 +2,7 @@ import tkinter as tk
 import numpy as np
 import random
 import heapq
+from collections import deque
 
 class GridApp:
     def __init__(self, size=10, wall_total=10, cell_size=50):
@@ -23,9 +24,11 @@ class GridApp:
             self.WALL: "gold",
             self.TREASURE: "pink",
             self.TRAP: "sky blue",
-            self.START: "light green",
-            self.PATH: "gray"
+            self.START: "light green"
         }
+
+        # Gradient path colors
+        self.path_colors = []
 
         # Grid symbols
         self.SYMBOLS = {
@@ -91,9 +94,6 @@ class GridApp:
         self.start_pos = start_pos
         self.treasure_pos = treasure_pos
 
-        self.start_pos = start_pos
-        self.treasure_pos = treasure_pos
-
         return grid
 
     # Return valid neighbors for a given position.
@@ -112,78 +112,129 @@ class GridApp:
         pass
 
     def run_bfs(self):
+        self.clear_path()
         path = self.bfs(self.start_pos, self.treasure_pos)
 
         if path is None:
             print("No path found!")
             return
 
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid()
-
-    def ucs(self, start, goal):
-        # TODO: Implementation
-        pass
-
-    def run_ucs(self):
-        path = self.ucs(self.start_pos, self.treasure_pos)
-
-        if path is None:
-            print("No path found!")
-            return
+        # Generate gradient colors
+        self.path_colors = self.generate_gradient_colors(len(path))
 
         for (r, c) in path:
             if self.grid[r, c] == self.EMPTY:
                 self.grid[r, c] = self.PATH
 
-        self.draw_grid()
+        self.draw_grid(path)
 
     def dfs(self, position=None, path=None, visited=None):
         position = position or self.start_pos
-        path = path or set()
+        path = path or []
         visited = visited or set()
         r, c = position
 
         if self.grid[r, c] == self.WALL: # invalid position
-            return
-        elif position in path or position in visited: # already visited (avoid loops)
-            return
+            return None
+        elif position in visited: # already visited (avoid loops)
+            return None
         elif self.grid[r, c] == self.TREASURE: # found treasure
-            path.add(position)
-            return path.copy()
-        
+            return path + [position]
+
         visited.add(position)
-        path.add(position)
         for cell in self.get_neighbors(position):
-            result = self.dfs(cell, path, visited)
+            result = self.dfs(cell, path + [position], visited)
             if result is not None:
                 return result
-        path.remove(position)
+
+        return None
 
     def run_dfs(self):
+        self.clear_path()
         path = self.dfs()
 
         if path is None:
             print("No path found!")
             return
 
+        # Generate gradient colors
+        self.path_colors = self.generate_gradient_colors(len(path))
+
         for (r, c) in path:
             if self.grid[r, c] == self.EMPTY:
                 self.grid[r, c] = self.PATH
 
-        self.draw_grid()
+        self.draw_grid(path)
 
-    def draw_grid(self):
+    def ucs(self, start, goal):
+        # TODO: Implementation
+        pass
+
+    def run_ucs(self):
+        self.clear_path()
+        path = self.ucs(self.start_pos, self.treasure_pos)
+
+        if path is None:
+            print("No path found!")
+            return
+
+        # Generate gradient colors
+        self.path_colors = self.generate_gradient_colors(len(path))
+
+        for (r, c) in path:
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+
+        self.draw_grid(path)
+
+    # Clear all path cells from the grid
+    def clear_path(self):
+        for r in range(self.size):
+            for c in range(self.size):
+                if self.grid[r, c] == self.PATH:
+                    self.grid[r, c] = self.EMPTY
+
+    # Interpolate color for current cell of path between light green (for start) and pink (for treasure)
+    def interpolate_path_color(self, ratio):
+        # Start RGB:    (144, 238, 144)
+        # Treasure RGB: (255, 192, 203)
+        start_r, start_g, start_b = 144, 238, 144
+        end_r, end_g, end_b = 255, 192, 203
+
+        r = int(start_r + (end_r - start_r) * ratio)
+        g = int(start_g + (end_g - start_g) * ratio)
+        b = int(start_b + (end_b - start_b) * ratio)
+
+        return f'#{r:02x}{g:02x}{b:02x}'
+
+    # Generate gradient colors for the entire path
+    def generate_gradient_colors(self, path_length):
+        colors = []
+        for i in range(path_length):
+            ratio = i / max(path_length - 1, 1)
+            colors.append(self.interpolate_path_color(ratio))
+        return colors
+
+    def draw_grid(self, path=None):
         self.canvas.delete("all")
+
+        # Create a mapping of positions to path indices for gradient coloring
+        path_index_map = {}
+        if path is not None:
+            for i, pos in enumerate(path):
+                path_index_map[pos] = i
+
         for r in range(self.size):
             for c in range(self.size):
                 x1, y1 = c * self.cell_size, r * self.cell_size
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 value = self.grid[r, c]
-                color = self.COLORS[value]
+
+                # Determine color
+                if value == self.PATH and (r, c) in path_index_map:
+                    color = self.path_colors[path_index_map[(r, c)]]
+                else:
+                    color = self.COLORS[value]
 
                 # Draw background
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
@@ -199,6 +250,7 @@ class GridApp:
 
     def regenerate_grid(self):
         self.grid = self.create_grid()
+        self.path_colors = []
         self.draw_grid()
 
     def run(self):
