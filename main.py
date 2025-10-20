@@ -2,7 +2,6 @@ import tkinter as tk
 import numpy as np
 import random
 import heapq
-from collections import deque
 
 class GridApp:
     def __init__(self, size=10, wall_total=10, cell_size=50):
@@ -167,8 +166,41 @@ class GridApp:
         self.draw_grid(path)
 
     def ucs(self, start, goal):
-        # TODO: Implementation
-        pass
+        pq = [(0, start)]           # Priority queue: (cost, position)
+        visited = set()             # Record all fully explored cells so far
+        parent = {start: None}      # Record best parents of each cell for path reconstruction
+        cost = {start: 0}           # Record lowest costs to reach each cell
+
+        while pq:
+            current_cost, current_pos = heapq.heappop(pq)
+
+            # Skip current position if already visited
+            if current_pos in visited:
+                continue
+
+            # Otherwise, record that current position has been visited
+            visited.add(current_pos)
+
+            # If goal state reached
+            if current_pos == goal:
+                # Reconstruct path from start to goal
+                path = []
+                while current_pos is not None:
+                    path.append(current_pos)
+                    current_pos = parent[current_pos]
+                return path[::-1]
+
+            # Explore neighbors and get their costs
+            for neighbor in self.get_neighbors(current_pos):
+                new_cost = current_cost + 1
+
+                # Update if this is a better path to neighbor
+                if neighbor not in cost or new_cost < cost[neighbor]:
+                    cost[neighbor] = new_cost
+                    parent[neighbor] = current_pos
+                    heapq.heappush(pq, (new_cost, neighbor))
+
+        return None
 
     def run_ucs(self):
         self.clear_path()
