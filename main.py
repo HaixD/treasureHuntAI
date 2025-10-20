@@ -6,8 +6,9 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, size=10, wall_total=10, cell_size=50):
+    def __init__(self, size=10, trap_total=1, wall_total=10, cell_size=50):
         self.size = size
+        self.trap_total = trap_total
         self.wall_total = wall_total
         self.cell_size = cell_size
 
@@ -39,6 +40,7 @@ class GridApp:
             self.START: "S"
         }
 
+        # Animation settings
         self.animation_speed = 25  # milliseconds between steps
         self.is_animating = False
 
@@ -92,13 +94,13 @@ class GridApp:
                 grid[treasure_pos] = self.TREASURE
                 treasure_placed = True
 
-        # Place trap
-        trap_placed = False
-        while not trap_placed:
+        # Place traps
+        trap_count = 0
+        while trap_count < self.trap_total:
             trap_pos = (random.randrange(self.size), random.randrange(self.size))
             if grid[trap_pos] == self.EMPTY:
                 grid[trap_pos] = self.TRAP
-                trap_placed = True
+                trap_count += 1
 
         # Place walls
         wall_count = 0
@@ -281,7 +283,7 @@ class GridApp:
                 return path[::-1], cells_expanded
 
             # Otherwise, explore neighbors and get their costs
-            for neighbor in self.get_neighbors(current_pos, include_traps=True):
+            for neighbor in self.get_neighbors(current_pos):
                 new_cost = current_cost + 1
 
                 # Update if this is a better path to neighbor
@@ -404,5 +406,5 @@ class GridApp:
         self.root.mainloop()
 
 if __name__ == "__main__":
-    app = GridApp(size=10, wall_total=10)
+    app = GridApp()
     app.run()
