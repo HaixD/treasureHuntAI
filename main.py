@@ -118,14 +118,47 @@ class GridApp:
         self.start_pos = start_pos
         self.treasure_pos = treasure_pos
 
+        self.moves = []
+
+        # make get neighbors point in the direction of the target first
+        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]): # prioritize horizontal
+            if start_pos[1] < treasure_pos[1]: # go right first, left third
+                self.moves.append(lambda r, c : (r, c + 1))
+                self.moves.append(lambda r, c : (r, c - 1))
+            else:
+                self.moves.append(lambda r, c : (r, c - 1))
+                self.moves.append(lambda r, c : (r, c + 1))
+
+            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
+                self.moves.insert(1, lambda r, c : (r + 1, c))
+                self.moves.append(lambda r, c : (r - 1, c))
+            else:
+                self.moves.insert(1, lambda r, c : (r - 1, c))
+                self.moves.append(lambda r, c : (r + 1, c))
+        else: # prioritize vertical
+            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
+                self.moves.append(lambda r, c : (r + 1, c))
+                self.moves.append(lambda r, c : (r - 1, c))
+            else:
+                self.moves.append(lambda r, c : (r - 1, c))
+                self.moves.append(lambda r, c : (r + 1, c))
+
+            
+            if start_pos[1] < treasure_pos[1]:  # go right first, left third
+                self.moves.insert(1, lambda r, c : (r, c + 1))
+                self.moves.append(lambda r, c : (r, c - 1))
+            else:
+                self.moves.insert(1, lambda r, c : (r, c - 1))
+                self.moves.append(lambda r, c : (r, c + 1))
+
         return grid
 
     # Return valid neighbors for a given position
     def get_neighbors(self, pos):
         r, c = pos
-        moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
         valid_neighbors = []
-        for nr, nc in moves:
+        for move in self.moves:
+            nr, nc = move(r, c)
             if 0 <= nr < self.size and 0 <= nc < self.size:
                 if self.grid[nr, nc] not in [self.WALL, self.TRAP]:
                     valid_neighbors.append((nr, nc))
@@ -174,7 +207,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):
+    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):        
         position = position or self.start_pos
         path = path or []
         visited = visited or set()
