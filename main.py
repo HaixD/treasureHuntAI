@@ -52,10 +52,7 @@ class GridApp:
         tk.Button(self.root, text="Run UCS", command=self.run_ucs).pack()
 
         # Draw grid
-        self.grid, start_pos = self.create_grid()
-
-        self.DFS_path = self.DFS(start_pos)
-        
+        self.grid = self.create_grid()
         self.draw_grid()
 
     def create_grid(self):
@@ -127,23 +124,6 @@ class GridApp:
 
         self.draw_grid()
 
-    def dfs(self, start, goal):
-        # TODO: Implementation
-        pass
-
-    def run_dfs(self):
-        path = self.dfs(self.start_pos, self.treasure_pos)
-
-        if path is None:
-            print("No path found!")
-            return
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid()
-
     def ucs(self, start, goal):
         # TODO: Implementation
         pass
@@ -161,57 +141,30 @@ class GridApp:
 
         self.draw_grid()
 
-    # Return valid neighbors for a given position.
-    def get_neighbors(self, pos):
-        r, c = pos
-        moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
-        valid_neighbors = []
-        for nr, nc in moves:
-            if 0 <= nr < self.size and 0 <= nc < self.size:
-                if self.grid[nr, nc] not in [self.WALL, self.TRAP]:
-                    valid_neighbors.append((nr, nc))
-        return valid_neighbors
+    def dfs(self, position=None, path=None, visited=None):
+        position = position or self.start_pos
+        path = path or set()
+        visited = visited or set()
+        r, c = position
 
-    def bfs(self, start, goal):
-        # TODO: Implementation
-        pass
-
-    def run_bfs(self):
-        path = self.bfs(self.start_pos, self.treasure_pos)
-
-        if path is None:
-            print("No path found!")
+        if self.grid[r, c] == self.WALL: # invalid position
             return
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid()
-
-    def dfs(self, start, goal):
-        # TODO: Implementation
-        pass
+        elif position in path or position in visited: # already visited (avoid loops)
+            return
+        elif self.grid[r, c] == self.TREASURE: # found treasure
+            path.add(position)
+            return path.copy()
+        
+        visited.add(position)
+        path.add(position)
+        for cell in self.get_neighbors(position):
+            result = self.dfs(cell, path, visited)
+            if result is not None:
+                return result
+        path.remove(position)
 
     def run_dfs(self):
-        path = self.dfs(self.start_pos, self.treasure_pos)
-
-        if path is None:
-            print("No path found!")
-            return
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid()
-
-    def ucs(self, start, goal):
-        # TODO: Implementation
-        pass
-
-    def run_ucs(self):
-        path = self.ucs(self.start_pos, self.treasure_pos)
+        path = self.dfs()
 
         if path is None:
             print("No path found!")
@@ -232,10 +185,6 @@ class GridApp:
                 value = self.grid[r, c]
                 color = self.COLORS[value]
 
-                # draw path
-                if (r, c) in self.DFS_path:
-                    color = "red"
-
                 # Draw background
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
@@ -254,36 +203,6 @@ class GridApp:
 
     def run(self):
         self.root.mainloop()
-
-
-    def expand(self, row, col):
-        if row + 1 in range(0, self.size): 
-            yield (row + 1, col)
-        if row - 1 in range(0, self.size): 
-            yield (row - 1, col)
-        if col + 1 in range(0, self.size): 
-            yield (row, col + 1)
-        if col - 1 in range(0, self.size): 
-            yield (row, col - 1)
-
-    def DFS(self, position, path=None):
-        path = path or set()
-        r, c = position
-
-        if self.grid[r, c] == self.WALL:       # invalid position
-            return
-        elif position in path:                 # already visited (avoid loops)
-            return
-        elif self.grid[r, c] == self.TREASURE: # found treasure
-            path.add(position)
-            return path.copy()
-        
-        path.add(position)
-        for cell in self.expand(r, c):
-            result = self.DFS(cell, path)
-            if result is not None:
-                return result
-        path.remove(position)
 
 if __name__ == "__main__":
     app = GridApp(size=10, wall_total=10)
