@@ -39,6 +39,10 @@ class GridApp:
             self.START: "S"
         }
 
+        # Animation settings
+        self.animation_speed = 25  # milliseconds between steps
+        self.is_animating = False
+
         # Initialize GUI
         self.root = tk.Tk()
         self.root.title("Treasure Hunt AI")
@@ -150,8 +154,10 @@ class GridApp:
 
         return None, cells_expanded
 
-
     def run_bfs(self):
+        if self.is_animating:
+            return
+
         self.clear_path()
 
         start_time = time.time()
@@ -159,26 +165,14 @@ class GridApp:
         end_time = time.time()
 
         if result[0] is None:
-            print("No path found!")
             self.stats_label.config(text="BFS: No path found!")
             return
 
         path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
-        path_cost = len(path) - 1
 
-        # Update stats display
-        stats_text = f"BFS Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
-        self.stats_label.config(text=stats_text)
-
-        # Generate gradient colors
-        self.path_colors = self.generate_gradient_colors(len(path))
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid(path)
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "BFS")
 
     def dfs(self, position=None, path=None, visited=None, cells_expanded=None):
         position = position or self.start_pos
@@ -207,6 +201,9 @@ class GridApp:
         return None, cells_expanded[0]
 
     def run_dfs(self):
+        if self.is_animating:
+            return
+
         self.clear_path()
 
         start_time = time.time()
@@ -219,20 +216,9 @@ class GridApp:
 
         path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
-        path_cost = len(path) - 1
 
-        # Update stats display
-        stats_text = f"DFS Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
-        self.stats_label.config(text=stats_text)
-
-        # Generate gradient colors
-        self.path_colors = self.generate_gradient_colors(len(path))
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid(path)
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "DFS")
 
     def ucs(self, start, goal):
         pq = [(0, start)]           # Priority queue: (cost, position)
@@ -275,6 +261,9 @@ class GridApp:
         return None, cells_expanded
 
     def run_ucs(self):
+        if self.is_animating:
+            return
+
         self.clear_path()
 
         start_time = time.time()
@@ -282,28 +271,15 @@ class GridApp:
         end_time = time.time()
 
         if result[0] is None:
-            print("No path found!")
             self.stats_label.config(text="UCS: No path found!")
             return
 
         path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
-        path_cost = len(path) - 1
 
-        # Update stats display
-        stats_text = f"UCS Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
-        self.stats_label.config(text=stats_text)
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "UCS")
 
-        # Generate gradient colors
-        self.path_colors = self.generate_gradient_colors(len(path))
-
-        for (r, c) in path:
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
-
-        self.draw_grid(path)
-
-    # Clear all path cells from the grid
     def clear_path(self):
         for r in range(self.size):
             for c in range(self.size):
@@ -331,14 +307,33 @@ class GridApp:
             colors.append(self.interpolate_path_color(ratio))
         return colors
 
-    def draw_grid(self, path=None):
-        self.canvas.delete("all")
+    # Animate the path cell by cell
+    def animate_path(self, path, cells_expanded, execution_time, algorithm_name):
+        """Animate the path drawing with gradient colors"""
+        self.is_animating = True
+        self.path_colors = {}
 
-        # Create a mapping of positions to path indices for gradient coloring
-        path_index_map = {}
-        if path is not None:
-            for i, pos in enumerate(path):
-                path_index_map[pos] = i
+        # Calculate gradient colors for each path cell
+        gradient_colors = self.generate_gradient_colors(len(path))
+        for i, pos in enumerate(path):
+            self.path_colors[pos] = gradient_colors[i]
+
+        # Animate step by step
+        for i, (r, c) in enumerate(path):
+            if self.grid[r, c] == self.EMPTY:
+                self.grid[r, c] = self.PATH
+            self.draw_grid()
+            self.root.update()
+            self.root.after(self.animation_speed)
+
+        # Animation complete
+        self.is_animating = False
+        path_cost = len(path) - 1
+        stats_text = f"{algorithm_name} Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
+        self.stats_label.config(text=stats_text)
+
+    def draw_grid(self):
+        self.canvas.delete("all")
 
         for r in range(self.size):
             for c in range(self.size):
@@ -346,9 +341,9 @@ class GridApp:
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 value = self.grid[r, c]
 
-                # Determine color
-                if value == self.PATH and (r, c) in path_index_map:
-                    color = self.path_colors[path_index_map[(r, c)]]
+                # Use stored path color if available
+                if value == self.PATH and (r, c) in self.path_colors:
+                    color = self.path_colors[(r, c)]
                 else:
                     color = self.COLORS[value]
 
@@ -365,6 +360,9 @@ class GridApp:
                     )
 
     def regenerate_grid(self):
+        if self.is_animating:
+            return
+
         self.grid = self.create_grid()
         self.path_colors = []
         self.stats_label.config(text="Run a search algorithm to see statistics")
