@@ -6,8 +6,9 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, size=10, trap_total=1, wall_total=10, cell_size=50):
-        self.size = size
+    def __init__(self, grid_size=20, treasure_total=1, trap_total=3, wall_total=10, cell_size=25):
+        self.grid_size = grid_size
+        self.treasure_total = treasure_total
         self.trap_total = trap_total
         self.wall_total = wall_total
         self.cell_size = cell_size
@@ -17,8 +18,9 @@ class GridApp:
         self.WALL = 1
         self.TREASURE = 2
         self.TRAP = 3
-        self.START = 4
-        self.PATH = 5
+        self.TRAP_TRIGGERED = 4
+        self.START = 5
+        self.PATH = 6
 
         # Grid colors
         self.COLORS = {
@@ -26,6 +28,7 @@ class GridApp:
             self.WALL: "gold",
             self.TREASURE: "pink",
             self.TRAP: "sky blue",
+            self.TRAP_TRIGGERED: "royal blue",
             self.START: "light green"
         }
 
@@ -37,11 +40,12 @@ class GridApp:
             self.WALL: "#",
             self.TREASURE: "T",
             self.TRAP: "X",
+            self.TRAP_TRIGGERED: "!",
             self.START: "S"
         }
 
         # Animation settings
-        self.animation_speed = 25  # milliseconds between steps
+        self.animation_speed = 10  # milliseconds between steps
         self.is_animating = False
 
         # Initialize GUI
@@ -50,8 +54,8 @@ class GridApp:
 
         self.canvas = tk.Canvas(
             self.root,
-            width=self.size * self.cell_size,
-            height=self.size * self.cell_size
+            width=self.grid_size * self.cell_size,
+            height=self.grid_size * self.cell_size
         )
         self.canvas.pack(padx=10, pady=10)
 
@@ -84,20 +88,20 @@ class GridApp:
         self.draw_grid()
 
     def create_grid(self):
-        grid = np.zeros((self.size, self.size), dtype=int)
+        grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
-        # Place treasure
-        treasure_placed = False
-        while not treasure_placed:
-            treasure_pos = (random.randrange(self.size), random.randrange(self.size))
+        # Place treasures
+        treasure_count = 0
+        while treasure_count < self.treasure_total:
+            treasure_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
             if grid[treasure_pos] == self.EMPTY:
                 grid[treasure_pos] = self.TREASURE
-                treasure_placed = True
+                treasure_count += 1
 
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            trap_pos = (random.randrange(self.size), random.randrange(self.size))
+            trap_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
             if grid[trap_pos] == self.EMPTY:
                 grid[trap_pos] = self.TRAP
                 trap_count += 1
@@ -105,18 +109,19 @@ class GridApp:
         # Place walls
         wall_count = 0
         while wall_count < self.wall_total:
-            r, c = random.randrange(self.size), random.randrange(self.size)
+            r, c = random.randrange(self.grid_size), random.randrange(self.grid_size)
             if grid[r, c] == self.EMPTY:
                 grid[r, c] = self.WALL
                 wall_count += 1
 
         # Place start
-        start_pos = (random.randrange(self.size), random.randrange(self.size))
+        start_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
         while start_pos in [treasure_pos, trap_pos]:
-            start_pos = (random.randrange(self.size), random.randrange(self.size))
+            start_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
         grid[start_pos] = self.START
 
         self.start_pos = start_pos
+        # TODO: allow list of positions for treasure
         self.treasure_pos = treasure_pos
 
         self.moves = []
@@ -144,7 +149,6 @@ class GridApp:
                 self.moves.append(lambda r, c : (r - 1, c))
                 self.moves.append(lambda r, c : (r + 1, c))
 
-            
             if start_pos[1] < treasure_pos[1]:  # go right first, left third
                 self.moves.insert(1, lambda r, c : (r, c + 1))
                 self.moves.append(lambda r, c : (r, c - 1))
@@ -158,11 +162,14 @@ class GridApp:
     def get_neighbors(self, pos, include_traps=False):
         r, c = pos
         valid_neighbors = []
+
         for move in self.moves:
             nr, nc = move(r, c)
-            if 0 <= nr < self.size and 0 <= nc < self.size:
-                if not include_traps and self.grid[nr, nc] not in [self.WALL, self.TRAP] or include_traps and self.grid[nr, nc] not in [self.WALL]:
+            if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
+                if (not include_traps and self.grid[nr, nc] not in [self.WALL, self.TRAP]
+                        or include_traps and self.grid[nr, nc] not in [self.WALL]):
                     valid_neighbors.append((nr, nc))
+
         return valid_neighbors
 
     def bfs(self):
@@ -208,7 +215,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):        
+    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):
         position = position or self.start_pos
         path = path or []
         visited = visited or set()
@@ -283,8 +290,10 @@ class GridApp:
                 return path[::-1], cells_expanded
 
             # Otherwise, explore neighbors and get their costs
-            for neighbor in self.get_neighbors(current_pos):
+            for neighbor in self.get_neighbors(current_pos, include_traps=True):
                 new_cost = current_cost + 1
+                if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
+                    new_cost += 4
 
                 # Update if this is a better path to neighbor
                 if neighbor not in cost or new_cost < cost[neighbor]:
@@ -315,10 +324,15 @@ class GridApp:
         self.animate_path(path, cells_expanded, execution_time, "UCS")
 
     def clear_path(self):
-        for r in range(self.size):
-            for c in range(self.size):
-                if self.grid[r, c] == self.PATH:
-                    self.grid[r, c] = self.EMPTY
+        for r in range(self.grid_size):
+            for c in range(self.grid_size):
+                match self.grid[r, c]:
+                    case self.PATH:
+                        self.grid[r, c] = self.EMPTY
+                    case self.TRAP_TRIGGERED:
+                        self.grid[r, c] = self.TRAP
+
+        self.draw_grid()
 
     # Interpolate color for current cell of path between light green (for start) and pink (for treasure)
     def interpolate_path_color(self, ratio):
@@ -354,8 +368,13 @@ class GridApp:
 
         # Animate step by step
         for i, (r, c) in enumerate(path):
-            if self.grid[r, c] == self.EMPTY:
-                self.grid[r, c] = self.PATH
+            match self.grid[r, c]:
+                case self.EMPTY:
+                    self.grid[r, c] = self.PATH
+                case self.TRAP:
+                    self.grid[r, c] = self.TRAP_TRIGGERED
+                case _:
+                    pass
             self.draw_grid()
             self.root.update()
             self.root.after(self.animation_speed)
@@ -369,8 +388,8 @@ class GridApp:
     def draw_grid(self):
         self.canvas.delete("all")
 
-        for r in range(self.size):
-            for c in range(self.size):
+        for r in range(self.grid_size):
+            for c in range(self.grid_size):
                 x1, y1 = c * self.cell_size, r * self.cell_size
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 value = self.grid[r, c]
