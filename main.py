@@ -267,14 +267,14 @@ class GridApp:
         for move_order in GridApp.get_moves(): # try all moves with include_traps=False
             result = self.dfs(grid, move_order=move_order, include_traps=False)
             
-            if result[0] and self.get_path_score(result[0]) < min_result[0]:
+            if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
 
         
         for move_order in GridApp.get_moves(): # try all moves with include_traps=True
             result = self.dfs(grid, move_order=move_order, include_traps=True)
             
-            if result[0] and self.get_path_score(result[0]) < min_result[0]:
+            if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
                 
         end_time = time.time()
@@ -396,6 +396,7 @@ class GridApp:
             self.path_colors[pos] = gradient_colors[i]
 
         # Animate step by step
+        expected_draw_time = time.time()
         for i, (r, c) in enumerate(path):
             match self.grid[r, c]:
                 case self.EMPTY:
@@ -404,9 +405,16 @@ class GridApp:
                     self.grid[r, c] = self.TRAP_TRIGGERED
                 case _:
                     pass
-            self.draw_grid()
-            self.root.update()
-            self.root.after(self.animation_speed)
+
+            expected_draw_time += self.animation_speed / 1000
+            if expected_draw_time > time.time(): # too fast:
+                time.sleep(expected_draw_time - time.time())
+
+                self.draw_grid()
+                self.root.update()
+
+        self.draw_grid()
+        self.root.update()
 
         # Animation complete
         self.is_animating = False
