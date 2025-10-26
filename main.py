@@ -124,46 +124,34 @@ class GridApp:
         # TODO: allow list of positions for treasure
         self.treasure_pos = treasure_pos
 
-        self.moves = []
-
-        # make get neighbors point in the direction of the target first
-        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]): # prioritize horizontal
-            if start_pos[1] < treasure_pos[1]: # go right first, left third
-                self.moves.append(lambda r, c : (r, c + 1))
-                self.moves.append(lambda r, c : (r, c - 1))
-            else:
-                self.moves.append(lambda r, c : (r, c - 1))
-                self.moves.append(lambda r, c : (r, c + 1))
-
-            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
-                self.moves.insert(1, lambda r, c : (r + 1, c))
-                self.moves.append(lambda r, c : (r - 1, c))
-            else:
-                self.moves.insert(1, lambda r, c : (r - 1, c))
-                self.moves.append(lambda r, c : (r + 1, c))
-        else: # prioritize vertical
-            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
-                self.moves.append(lambda r, c : (r + 1, c))
-                self.moves.append(lambda r, c : (r - 1, c))
-            else:
-                self.moves.append(lambda r, c : (r - 1, c))
-                self.moves.append(lambda r, c : (r + 1, c))
-
-            if start_pos[1] < treasure_pos[1]:  # go right first, left third
-                self.moves.insert(1, lambda r, c : (r, c + 1))
-                self.moves.append(lambda r, c : (r, c - 1))
-            else:
-                self.moves.insert(1, lambda r, c : (r, c - 1))
-                self.moves.append(lambda r, c : (r, c + 1))
-
         return grid
 
+    @staticmethod
+    def get_moves():
+        options = [
+            lambda r, c : (r, c + 1), # right
+            lambda r, c : (r, c - 1), # left
+            lambda r, c : (r - 1, c), # up
+            lambda r, c : (r + 1, c)  # down
+        ]
+
+        for move1 in options:
+            for move2 in options:
+                for move3 in options:
+                    for move4 in options:
+                        if len({move1, move2, move3, move4}) != 4:
+                            continue
+
+                        yield [move1, move2, move3, move4]
+
     # Return valid neighbors for a given position
-    def get_neighbors(self, pos, include_traps=False):
+    def get_neighbors(self, pos, moves=None, include_traps=False):
         r, c = pos
         valid_neighbors = []
 
-        for move in self.moves:
+        moves = moves or next(GridApp.get_moves())
+
+        for move in moves:
             nr, nc = move(r, c)
             if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
                 if (not include_traps and self.grid[nr, nc] not in [self.WALL, self.TRAP]
@@ -215,7 +203,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):
+    def dfs(self, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None):
         position = position or self.start_pos
         path = path or []
         visited = visited or set()
@@ -234,7 +222,7 @@ class GridApp:
 
         cells_expanded[0] += 1
         visited.add(position)
-        for cell in self.get_neighbors(position):
+        for cell in self.get_neighbors(position, moves=move_order):
             result, _ = self.dfs(cell, path + [position], visited, cells_expanded)
             if result is not None:
                 return result, cells_expanded[0]
@@ -248,14 +236,18 @@ class GridApp:
         self.clear_path()
 
         start_time = time.time()
-        result = self.dfs()
+        min_result = (float('inf'), None)
+        for move_order in GridApp.get_moves():
+            result = self.dfs(move_order=move_order)
+            if len(result[0]) < min_result[0]:
+                min_result = (len(result[0]), result)
         end_time = time.time()
 
-        if result[0] is None:
+        if min_result[1][0] is None:
             self.stats_label.config(text="DFS: No path found!")
             return
 
-        path, cells_expanded = result
+        path, cells_expanded = min_result[1]
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
