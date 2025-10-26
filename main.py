@@ -5,8 +5,6 @@ import heapq
 import time
 from collections import deque
 
-from grid import Grid
-
 class GridApp:
     def __init__(self, grid_size=20, treasure_total=1, trap_total=3, wall_total=10, cell_size=25):
         self.grid_size = grid_size
@@ -87,7 +85,6 @@ class GridApp:
 
         # Draw grid
         self.grid = self.create_grid()
-        self.load_grid('many traps and walls')
         self.draw_grid()
 
     def get_path_score(self, path):
@@ -139,17 +136,6 @@ class GridApp:
         self.treasure_pos = treasure_pos
 
         return grid
-    
-    def load_grid(self, filename):
-        grid = Grid.load_file(filename)
-
-        # self.grid_size = grid.grid_size
-        # self.treasure_total = grid.treasure_total
-        # self.trap_total = grid.trap_total
-        # self.wall_total = grid.wall_total
-        self.start_pos = grid.start_pos
-        self.treasure_pos = grid.treasure_pos
-        self.grid = grid.grid
 
     @staticmethod
     def get_moves():
@@ -228,8 +214,8 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, grid, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None, include_traps=True):
-        position = position or grid.start_pos
+    def dfs(self, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None, include_traps=True):
+        position = position or self.start_pos
         path = path or []
         visited = visited or set()
         if cells_expanded is None:
@@ -237,18 +223,18 @@ class GridApp:
 
         r, c = position
 
-        if grid.grid[r, c] == Grid.WALL: # invalid position
+        if self.grid[r, c] == self.WALL: # invalid position
             return None, cells_expanded[0]
         elif position in visited: # already visited (avoid loops)
             return None, cells_expanded[0]
-        elif grid.grid[r, c] == Grid.TREASURE: # found treasure
+        elif self.grid[r, c] == self.TREASURE: # found treasure
             cells_expanded[0] += 1
             return path + [position], cells_expanded[0]
 
         cells_expanded[0] += 1
         visited.add(position)
         for cell in self.get_neighbors(position, moves=move_order, include_traps=include_traps):
-            result, _ = self.dfs(grid, cell, path + [position], visited, cells_expanded, move_order=move_order, include_traps=include_traps)
+            result, _ = self.dfs(cell, path + [position], visited, cells_expanded, move_order=move_order, include_traps=include_traps)
             if result is not None:
                 return result, cells_expanded[0]
 
@@ -259,20 +245,19 @@ class GridApp:
             return
 
         self.clear_path()
-        grid = Grid.load_grid(self.grid)
         
         start_time = time.time()
         
         min_result = (float('inf'), None)
         for move_order in GridApp.get_moves(): # try all moves with include_traps=False
-            result = self.dfs(grid, move_order=move_order, include_traps=False)
+            result = self.dfs(move_order=move_order, include_traps=False)
             
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
 
         
         for move_order in GridApp.get_moves(): # try all moves with include_traps=True
-            result = self.dfs(grid, move_order=move_order, include_traps=True)
+            result = self.dfs(move_order=move_order, include_traps=True)
             
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
