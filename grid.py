@@ -88,13 +88,15 @@ class Grid:
                     case Grid.TREASURE:
                         treasure_pos = (r, c)
                         treasure_total += 1
-                    case Grid.TRAP, Grid.TRAP_TRIGGERED:
+                    case Grid.TRAP | Grid.TRAP_TRIGGERED:
                         grid[r, c] = Grid.TRAP
                         trap_total += 1
                     case Grid.WALL:
                         wall_total += 1
                     case Grid.PATH:
                         grid[r, c] = Grid.EMPTY
+
+        print(grid)
 
         return Grid(grid_size, treasure_total, trap_total, wall_total,
                     grid=grid, start_pos=start_pos, treasure_pos=treasure_pos)
