@@ -1,5 +1,6 @@
 import numpy as np
-from os import mkdir
+from os import mkdir, remove
+from os.path import exists
 from random import randrange
 from pickle import dump, load
 
@@ -36,23 +37,23 @@ class Grid:
         trap_count = 0
         while trap_count < self.trap_total:
             trap_pos = (randrange(self.grid_size), randrange(self.grid_size))
-            if grid[trap_pos] == Grid.EMPTY:
-                grid[trap_pos] = Grid.TRAP
+            if self.grid[trap_pos] == Grid.EMPTY:
+                self.grid[trap_pos] = Grid.TRAP
                 trap_count += 1
 
         # Place walls
         wall_count = 0
         while wall_count < self.wall_total:
             r, c = randrange(self.grid_size), randrange(self.grid_size)
-            if grid[r, c] == Grid.EMPTY:
-                grid[r, c] = Grid.WALL
+            if self.grid[r, c] == Grid.EMPTY:
+                self.grid[r, c] = Grid.WALL
                 wall_count += 1
 
         # Place start
         start_pos = (randrange(self.grid_size), randrange(self.grid_size))
         while start_pos in [treasure_pos, trap_pos]:
             start_pos = (randrange(self.grid_size), randrange(self.grid_size))
-        grid[start_pos] = self.START
+        self.grid[start_pos] = self.START
 
         self.start_pos = start_pos
         self.treasure_pos = treasure_pos
@@ -98,7 +99,8 @@ class Grid:
         return Grid(grid_size, treasure_total, trap_total, wall_total,
                     grid=grid, start_pos=start_pos, treasure_pos=treasure_pos)
 
-if __name__ == '__main__':
+def test():
+    # load grid through np array and compare original to loaded grid
     grid1 = Grid.load_grid(np.array([
        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
        [6, 6, 6, 6, 6, 6, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -125,5 +127,20 @@ if __name__ == '__main__':
 
     if np.all(grid2.grid != grid1.grid):
         raise Exception('Grid save and load mismatch')
+    
+    # generate new grid and save
+    
+    grid3 = Grid(20, 3, 3, 10)
+    grid3.generate()
+    grid3.save('test2')
+
+    # delete generated files
+    if exists('test grids/test1.pickle'): # delete test1.pickle
+        remove('test grids/test1.pickle')
+    if exists('test grids/test2.pickle'): # delete test2.pickle
+        remove('test grids/test2.pickle')
 
     print('test complete')
+
+if __name__ == '__main__':
+    test()
