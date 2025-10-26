@@ -96,8 +96,6 @@ class Grid:
                     case Grid.PATH:
                         grid[r, c] = Grid.EMPTY
 
-        print(grid)
-
         return Grid(grid_size, treasure_total, trap_total, wall_total,
                     grid=grid, start_pos=start_pos, treasure_pos=treasure_pos)
 
@@ -146,4 +144,6 @@ def test():
 
 if __name__ == '__main__':
     # test()
-    pass
+    grid = Grid(20, 1, 20 ** 2 / 2, 20 ** 2 / 40)
+    grid.generate()
+    grid.save('many traps and walls')
