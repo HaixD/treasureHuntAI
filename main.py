@@ -5,6 +5,8 @@ import heapq
 import time
 from collections import deque
 
+from grid import Grid
+
 class GridApp:
     def __init__(self, grid_size=20, treasure_total=1, trap_total=3, wall_total=10, cell_size=25):
         self.grid_size = grid_size
@@ -203,8 +205,8 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None):
-        position = position or self.start_pos
+    def dfs(self, grid, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None):
+        position = position or grid.start_pos
         path = path or []
         visited = visited or set()
         if cells_expanded is None:
@@ -212,18 +214,18 @@ class GridApp:
 
         r, c = position
 
-        if self.grid[r, c] == self.WALL: # invalid position
+        if grid.grid[r, c] == Grid.WALL: # invalid position
             return None, cells_expanded[0]
         elif position in visited: # already visited (avoid loops)
             return None, cells_expanded[0]
-        elif self.grid[r, c] == self.TREASURE: # found treasure
+        elif grid.grid[r, c] == Grid.TREASURE: # found treasure
             cells_expanded[0] += 1
             return path + [position], cells_expanded[0]
 
         cells_expanded[0] += 1
         visited.add(position)
         for cell in self.get_neighbors(position, moves=move_order):
-            result, _ = self.dfs(cell, path + [position], visited, cells_expanded)
+            result, _ = self.dfs(grid, cell, path + [position], visited, cells_expanded, move_order=move_order)
             if result is not None:
                 return result, cells_expanded[0]
 
@@ -234,15 +236,19 @@ class GridApp:
             return
 
         self.clear_path()
-
+        grid = Grid.load_grid(self.grid)
+        
         start_time = time.time()
+        
         min_result = (float('inf'), None)
         for move_order in GridApp.get_moves():
-            result = self.dfs(move_order=move_order)
+            result = self.dfs(grid, move_order=move_order)
+            
             if len(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
+                
         end_time = time.time()
-
+        
         if min_result[1][0] is None:
             self.stats_label.config(text="DFS: No path found!")
             return
