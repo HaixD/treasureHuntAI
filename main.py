@@ -6,7 +6,7 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total= 1, trap_total=3, wall_total=40, cell_size=25):
+    def __init__(self, grid_size=20, treasure_total= 2, trap_total=3, wall_total=40, cell_size=25):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -90,6 +90,7 @@ class GridApp:
         self.draw_grid()
 
     def create_grid(self):
+        
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
         # Place treasures
@@ -157,7 +158,7 @@ class GridApp:
             else:
                 self.moves.insert(1, lambda r, c : (r, c - 1))
                 self.moves.append(lambda r, c : (r, c + 1))
-
+        
         return grid
 
     # Return valid neighbors for a given position
@@ -555,8 +556,8 @@ class GridApp:
     def regenerate_grid(self):
         if self.is_animating:
             return
-
-        self.grid = self.create_grid()
+        
+        self.grid = self.create_grid() 
         self.path_colors = []
         self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
