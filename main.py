@@ -6,13 +6,13 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total=1, trap_total=3, wall_total=10, cell_size=25):
+    def __init__(self, grid_size=20, treasure_total= 1, trap_total=3, wall_total=40, cell_size=25):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
         self.wall_total = wall_total
         self.cell_size = cell_size
-
+        self.treasure_total = treasure_total
         # Grid codes
         self.EMPTY = 0
         self.WALL = 1
@@ -82,21 +82,11 @@ class GridApp:
         tk.Button(button_frame, text="Run BFS", command=self.run_bfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run GREEDY", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
-
-    def get_path_score(self, path):
-        cost = -len(path) / 2 # -0.5 pts per length
-        
-        for r, c in path:
-            if self.grid[r, c] == self.TRAP or self.grid[r, c] == self.TRAP_TRIGGERED: # -5 pts per trap
-                cost -= 5
-            elif self.grid[r, c] == self.TREASURE:
-                cost += 10
-
-        return cost
 
     def create_grid(self):
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
@@ -135,34 +125,46 @@ class GridApp:
         # TODO: allow list of positions for treasure
         self.treasure_pos = treasure_pos
 
+        self.moves = []
+
+        # make get neighbors point in the direction of the target first
+        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]): # prioritize horizontal
+            if start_pos[1] < treasure_pos[1]: # go right first, left third
+                self.moves.append(lambda r, c : (r, c + 1))
+                self.moves.append(lambda r, c : (r, c - 1))
+            else:
+                self.moves.append(lambda r, c : (r, c - 1))
+                self.moves.append(lambda r, c : (r, c + 1))
+
+            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
+                self.moves.insert(1, lambda r, c : (r + 1, c))
+                self.moves.append(lambda r, c : (r - 1, c))
+            else:
+                self.moves.insert(1, lambda r, c : (r - 1, c))
+                self.moves.append(lambda r, c : (r + 1, c))
+        else: # prioritize vertical
+            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
+                self.moves.append(lambda r, c : (r + 1, c))
+                self.moves.append(lambda r, c : (r - 1, c))
+            else:
+                self.moves.append(lambda r, c : (r - 1, c))
+                self.moves.append(lambda r, c : (r + 1, c))
+
+            if start_pos[1] < treasure_pos[1]:  # go right first, left third
+                self.moves.insert(1, lambda r, c : (r, c + 1))
+                self.moves.append(lambda r, c : (r, c - 1))
+            else:
+                self.moves.insert(1, lambda r, c : (r, c - 1))
+                self.moves.append(lambda r, c : (r, c + 1))
+
         return grid
 
-    @staticmethod
-    def get_moves():
-        options = [
-            lambda r, c : (r, c + 1), # right
-            lambda r, c : (r, c - 1), # left
-            lambda r, c : (r - 1, c), # up
-            lambda r, c : (r + 1, c)  # down
-        ]
-
-        for move1 in options:
-            for move2 in options:
-                for move3 in options:
-                    for move4 in options:
-                        if len({move1, move2, move3, move4}) != 4:
-                            continue
-
-                        yield [move1, move2, move3, move4]
-
     # Return valid neighbors for a given position
-    def get_neighbors(self, pos, moves=None, include_traps=False):
+    def get_neighbors(self, pos, include_traps=False):
         r, c = pos
         valid_neighbors = []
 
-        moves = moves or next(GridApp.get_moves())
-
-        for move in moves:
+        for move in self.moves:
             nr, nc = move(r, c)
             if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
                 if (not include_traps and self.grid[nr, nc] not in [self.WALL, self.TRAP]
@@ -171,11 +173,85 @@ class GridApp:
 
         return valid_neighbors
 
+    @staticmethod
+    def manhattan_distance(point1, point2):
+        if len(point1) != len(point2):
+            raise ValueError("Points must have the same number of dimensions.")
+
+        distance = 0
+        for i in range(len(point1)):
+            distance += abs(point1[i] - point2[i])
+        return distance
+    
+    def greedy(self, start, goal):
+        pq = [(0, start)]           # Priority queue: (cost, position)
+        visited = set()             # Record all fully explored cells so far
+        parent = {start: None}      # Record best parents of each cell for path reconstruction
+        cost = {start: 0}           # Record lowest costs to reach each cell
+        cells_expanded = 0
+
+        while pq:
+            # Get next best cost and position from priority queue
+            currrent_cost, current_pos = heapq.heappop(pq)
+
+            # Skip current position if already visited
+            if current_pos in visited:
+                continue
+
+            # Otherwise, record that current position has been visited
+            visited.add(current_pos)
+            cells_expanded += 1
+
+            # If goal state reached
+            if current_pos == goal:
+                # Reconstruct path from start to goal
+                path = []
+                while current_pos is not None:
+                    path.append(current_pos)
+                    current_pos = parent[current_pos]
+                return path[::-1], cells_expanded
+
+            # Otherwise, explore neighbors and get their costs
+            for neighbor in self.get_neighbors(current_pos, include_traps=True):
+                new_cost = self.manhattan_distance(neighbor, goal)
+                if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
+                    new_cost += 4
+
+                # Update if this is a better path to neighbor
+                if neighbor not in cost or new_cost < cost[neighbor]:
+                    cost[neighbor] = new_cost
+                    parent[neighbor] = current_pos
+                    heapq.heappush(pq, (new_cost, neighbor))
+
+        return None, cells_expanded
+
+    
+
+    def run_greedy(self):
+        if self.is_animating:
+            return
+
+        self.clear_path()
+
+        start_time = time.time()
+        result = self.greedy(self.start_pos,self.treasure_pos)
+        end_time = time.time()
+
+        if result[0] is None:
+            self.stats_label.config(text="Greedy: No path found!")
+            return
+
+        path, cells_expanded = result
+        execution_time = (end_time - start_time) * 1000
+
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "BFS")
+
+
     def bfs(self):
         queue = deque([[self.start_pos]])
         visited = {self.start_pos}
         cells_expanded = 0
-
         while queue:
             path = queue.popleft()
             position = path[-1]
@@ -184,7 +260,7 @@ class GridApp:
             if self.grid[position[0], position[1]] == self.TREASURE:
                 return path, cells_expanded
 
-            for neighbor in self.get_neighbors(position):
+            for neighbor in self.get_neighbors(position, include_traps= True):
                 nr, nc = neighbor
                 if neighbor not in visited and self.grid[nr, nc] != self.WALL:
                     visited.add(neighbor)
@@ -199,7 +275,7 @@ class GridApp:
             return
 
         self.clear_path()
-
+        print(self.manhattan_distance(self.treasure_pos, self.start_pos))
         start_time = time.time()
         result = self.bfs()
         end_time = time.time()
@@ -214,7 +290,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
-    def dfs(self, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None, include_traps=True):
+    def dfs(self, position=None, path=None, visited=None, cells_expanded=None):
         position = position or self.start_pos
         path = path or []
         visited = visited or set()
@@ -233,8 +309,8 @@ class GridApp:
 
         cells_expanded[0] += 1
         visited.add(position)
-        for cell in self.get_neighbors(position, moves=move_order, include_traps=include_traps):
-            result, _ = self.dfs(cell, path + [position], visited, cells_expanded, move_order=move_order, include_traps=include_traps)
+        for cell in self.get_neighbors(position):
+            result, _ = self.dfs(cell, path + [position], visited, cells_expanded)
             if result is not None:
                 return result, cells_expanded[0]
 
@@ -245,31 +321,16 @@ class GridApp:
             return
 
         self.clear_path()
-        
-        start_time = time.time()
-        
-        min_result = (float('inf'), None)
-        for move_order in GridApp.get_moves(): # try all moves with include_traps=False
-            result = self.dfs(move_order=move_order, include_traps=False)
-            
-            if result[0] and -self.get_path_score(result[0]) < min_result[0]:
-                min_result = (len(result[0]), result)
 
-        
-        for move_order in GridApp.get_moves(): # try all moves with include_traps=True
-            result = self.dfs(move_order=move_order, include_traps=True)
-            
-            if result[0] and -self.get_path_score(result[0]) < min_result[0]:
-                min_result = (len(result[0]), result)
-                
+        start_time = time.time()
+        result = self.dfs()
         end_time = time.time()
-        
-        # relay best result to user
-        if min_result[1] is None:
+
+        if result[0] is None:
             self.stats_label.config(text="DFS: No path found!")
             return
 
-        path, cells_expanded = min_result[1]
+        path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
@@ -381,7 +442,6 @@ class GridApp:
             self.path_colors[pos] = gradient_colors[i]
 
         # Animate step by step
-        expected_draw_time = time.time()
         for i, (r, c) in enumerate(path):
             match self.grid[r, c]:
                 case self.EMPTY:
@@ -390,16 +450,9 @@ class GridApp:
                     self.grid[r, c] = self.TRAP_TRIGGERED
                 case _:
                     pass
-
-            expected_draw_time += self.animation_speed / 1000
-            if expected_draw_time > time.time(): # too fast:
-                time.sleep(expected_draw_time - time.time())
-
-                self.draw_grid()
-                self.root.update()
-
-        self.draw_grid()
-        self.root.update()
+            self.draw_grid()
+            self.root.update()
+            self.root.after(self.animation_speed)
 
         # Animation complete
         self.is_animating = False
@@ -440,7 +493,7 @@ class GridApp:
 
         self.grid = self.create_grid()
         self.path_colors = []
-        self.stats_label.config(text="Run a search algorithm to see statistics")
+        self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
 
     def run(self):
@@ -449,3 +502,4 @@ class GridApp:
 if __name__ == "__main__":
     app = GridApp()
     app.run()
+  
