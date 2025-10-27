@@ -83,6 +83,7 @@ class GridApp:
         tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run GREEDY", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run A_STAR", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
@@ -192,7 +193,7 @@ class GridApp:
 
         while pq:
             # Get next best cost and position from priority queue
-            currrent_cost, current_pos = heapq.heappop(pq)
+            current_cost, current_pos = heapq.heappop(pq)
 
             # Skip current position if already visited
             if current_pos in visited:
@@ -245,7 +246,71 @@ class GridApp:
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "BFS")
+        self.animate_path(path, cells_expanded, execution_time, "Greedy")
+
+    def a_star(self, start, goal):
+        pq = [(0, start)]           # Priority queue: (cost, position)
+        visited = set()             # Record all fully explored cells so far
+        parent = {start: None}      # Record best parents of each cell for path reconstruction
+        cost = {start: 0}           # Record lowest costs to reach each cell
+        cells_expanded = 0
+
+        while pq:
+            # Get next best cost and position from priority queue
+            current_cost, current_pos = heapq.heappop(pq)
+
+            # Skip current position if already visited
+            if current_pos in visited:
+                continue
+
+            # Otherwise, record that current position has been visited
+            visited.add(current_pos)
+            cells_expanded += 1
+
+            # If goal state reached
+            if current_pos == goal:
+                #Reconstruct path from start to goal
+                path = []
+                while current_pos is not None:
+                    path.append(current_pos)
+                    current_pos = parent[current_pos]
+                return path[::-1], cells_expanded
+
+            # Otherwise, explore neighbors and get their costs
+            for neighbor in self.get_neighbors(current_pos, include_traps=True):
+                new_cost = self.manhattan_distance(neighbor, goal) + current_cost + 1
+                if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
+                    new_cost += 4
+
+                # Update if this is a better path to neighbor
+                if neighbor not in cost or new_cost < cost[neighbor]:
+                    cost[neighbor] = new_cost
+                    parent[neighbor] = current_pos
+                    heapq.heappush(pq, (new_cost, neighbor))
+
+        return None, cells_expanded
+
+    
+
+    def run_a_star(self):
+        if self.is_animating:
+            return
+
+        self.clear_path()
+
+        start_time = time.time()
+        result = self.a_star(self.start_pos,self.treasure_pos)
+        end_time = time.time()
+
+        if result[0] is None:
+            self.stats_label.config(text="a_star: No path found!")
+            return
+
+        path, cells_expanded = result
+        execution_time = (end_time - start_time) * 1000
+
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "a_star")
 
 
     def bfs(self):
