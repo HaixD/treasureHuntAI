@@ -6,7 +6,7 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total= 2, trap_total=3, wall_total=40, cell_size=25):
+    def __init__(self, grid_size=10, treasure_total= 1, trap_total=2, wall_total=7, cell_size=50):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -104,7 +104,8 @@ class GridApp:
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            trap_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
+            trap_pos = (random.randrange(treasure_pos[0] -2 , treasure_pos[0] + 2), 
+                        random.randrange(treasure_pos[1] -2  , treasure_pos[1] +2))
             if grid[trap_pos] == self.EMPTY:
                 grid[trap_pos] = self.TRAP
                 trap_count += 1
