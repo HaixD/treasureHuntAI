@@ -6,27 +6,30 @@ import time
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=10, treasure_total= 1, trap_total=2, wall_total=7, cell_size=50):
+    def __init__(self, grid_size=10, treasure_total=1, trap_total=2, wall_total=5, cell_size=50):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
         self.wall_total = wall_total
         self.cell_size = cell_size
         self.treasure_total = treasure_total
+
         # Grid codes
         self.EMPTY = 0
         self.WALL = 1
         self.TREASURE = 2
-        self.TRAP = 3
-        self.TRAP_TRIGGERED = 4
-        self.START = 5
-        self.PATH = 6
+        self.TREASURE_COLLECTED = 3
+        self.TRAP = 4
+        self.TRAP_TRIGGERED = 5
+        self.START = 6
+        self.PATH = 7
 
         # Grid colors
         self.COLORS = {
             self.EMPTY: "white",
             self.WALL: "gold",
             self.TREASURE: "pink",
+            self.TREASURE_COLLECTED: "hot pink",
             self.TRAP: "sky blue",
             self.TRAP_TRIGGERED: "royal blue",
             self.START: "light green"
@@ -39,6 +42,7 @@ class GridApp:
         self.SYMBOLS = {
             self.WALL: "#",
             self.TREASURE: "T",
+            self.TREASURE_COLLECTED: "+",
             self.TRAP: "X",
             self.TRAP_TRIGGERED: "!",
             self.START: "S"
@@ -82,15 +86,15 @@ class GridApp:
         tk.Button(button_frame, text="Run BFS", command=self.run_bfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run GREEDY", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run A_STAR", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run Greedy", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run A*", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
 
     def create_grid(self):
-        
+        # Create empty grid
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
         # Place treasures
@@ -104,8 +108,8 @@ class GridApp:
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            trap_pos = (random.randrange(treasure_pos[0] -2 , treasure_pos[0] + 2), 
-                        random.randrange(treasure_pos[1] -2  , treasure_pos[1] +2))
+            trap_pos = (random.randrange(treasure_pos[0] - 2, treasure_pos[0] + 2),
+                        random.randrange(treasure_pos[1] - 2, treasure_pos[1] + 2))
             if grid[trap_pos] == self.EMPTY:
                 grid[trap_pos] = self.TRAP
                 trap_count += 1
@@ -159,7 +163,7 @@ class GridApp:
             else:
                 self.moves.insert(1, lambda r, c : (r, c - 1))
                 self.moves.append(lambda r, c : (r, c + 1))
-        
+
         return grid
 
     # Return valid neighbors for a given position
@@ -185,7 +189,7 @@ class GridApp:
         for i in range(len(point1)):
             distance += abs(point1[i] - point2[i])
         return distance
-    
+
     def greedy(self, start, goal):
         pq = [(0, start)]           # Priority queue: (cost, position)
         visited = set()             # Record all fully explored cells so far
@@ -228,7 +232,7 @@ class GridApp:
 
         return None, cells_expanded
 
-    
+
 
     def run_greedy(self):
         if self.is_animating:
@@ -292,7 +296,7 @@ class GridApp:
 
         return None, cells_expanded
 
-    
+
 
     def run_a_star(self):
         if self.is_animating:
@@ -471,6 +475,8 @@ class GridApp:
                 match self.grid[r, c]:
                     case self.PATH:
                         self.grid[r, c] = self.EMPTY
+                    case self.TREASURE_COLLECTED:
+                        self.grid[r, c] = self.TREASURE
                     case self.TRAP_TRIGGERED:
                         self.grid[r, c] = self.TRAP
 
@@ -513,6 +519,8 @@ class GridApp:
             match self.grid[r, c]:
                 case self.EMPTY:
                     self.grid[r, c] = self.PATH
+                case self.TREASURE:
+                    self.grid[r, c] = self.TREASURE_COLLECTED
                 case self.TRAP:
                     self.grid[r, c] = self.TRAP_TRIGGERED
                 case _:
@@ -557,8 +565,8 @@ class GridApp:
     def regenerate_grid(self):
         if self.is_animating:
             return
-        
-        self.grid = self.create_grid() 
+
+        self.grid = self.create_grid()
         self.path_colors = []
         self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
@@ -569,4 +577,4 @@ class GridApp:
 if __name__ == "__main__":
     app = GridApp()
     app.run()
-  
+
