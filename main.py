@@ -3,6 +3,7 @@ import numpy as np
 import random
 import heapq
 import time
+import sys
 from collections import deque
 
 class GridApp:
@@ -13,6 +14,9 @@ class GridApp:
         self.wall_total = wall_total
         self.cell_size = cell_size
         self.treasure_total = treasure_total
+
+        # Seed for random maze
+        self.seed = random.randrange(sys.maxsize)
 
         # Grid codes
         self.EMPTY = 0
@@ -89,18 +93,47 @@ class GridApp:
         tk.Button(button_frame, text="Run Greedy", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run A*", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
 
+        # Seed controls frame
+        seed_frame = tk.Frame(self.root)
+        seed_frame.pack(pady=(0, 10))
+
+        # Seed label
+        self.seed_label = tk.Label(seed_frame, text=f"Seed: {self.seed}", font=("Arial", 10))
+        self.seed_label.pack(side=tk.LEFT, padx=5)
+
+        # Entry to set seed
+        self.seed_entry = tk.Entry(seed_frame, width=10)
+        self.seed_entry.pack(side=tk.LEFT, padx=5)
+
+        # Copy seed button
+        def copy_seed():
+            self.root.clipboard_clear()
+            self.root.clipboard_append(str(self.seed))
+
+        tk.Button(seed_frame, text="Copy Seed", command=copy_seed).pack(side=tk.LEFT, padx=5)
+
+        # Set seed button
+        def set_seed():
+            new_seed = int(self.seed_entry.get())
+            self.seed = new_seed
+            self.regenerate_grid(self.seed)
+
+        tk.Button(seed_frame, text="Set Seed", command=set_seed).pack(side=tk.LEFT, padx=5)
+
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
 
     def create_grid(self):
+        rand = random.Random(self.seed)
+
         # Create empty grid
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
         # Place treasures
         treasure_count = 0
         while treasure_count < self.treasure_total:
-            treasure_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
+            treasure_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
             if grid[treasure_pos] == self.EMPTY:
                 grid[treasure_pos] = self.TREASURE
                 treasure_count += 1
@@ -108,8 +141,8 @@ class GridApp:
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            trap_pos = (random.randrange(treasure_pos[0] - 2, treasure_pos[0] + 2),
-                        random.randrange(treasure_pos[1] - 2, treasure_pos[1] + 2))
+            trap_pos = (rand.randrange(max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)),
+                        rand.randrange(max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)))
             if grid[trap_pos] == self.EMPTY:
                 grid[trap_pos] = self.TRAP
                 trap_count += 1
@@ -117,15 +150,15 @@ class GridApp:
         # Place walls
         wall_count = 0
         while wall_count < self.wall_total:
-            r, c = random.randrange(self.grid_size), random.randrange(self.grid_size)
+            r, c = rand.randrange(self.grid_size), rand.randrange(self.grid_size)
             if grid[r, c] == self.EMPTY:
                 grid[r, c] = self.WALL
                 wall_count += 1
 
         # Place start
-        start_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
+        start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
         while start_pos in [treasure_pos, trap_pos]:
-            start_pos = (random.randrange(self.grid_size), random.randrange(self.grid_size))
+            start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
         grid[start_pos] = self.START
 
         self.start_pos = start_pos
@@ -488,6 +521,7 @@ class GridApp:
         # Treasure RGB: (255, 192, 203)
         start_r, start_g, start_b = 144, 238, 144
         end_r, end_g, end_b = 255, 192, 203
+        # end_r, end_g, end_b = 238, 114, 178
 
         r = int(start_r + (end_r - start_r) * ratio)
         g = int(start_g + (end_g - start_g) * ratio)
@@ -562,14 +596,17 @@ class GridApp:
                         fill="black"
                     )
 
-    def regenerate_grid(self):
+    def regenerate_grid(self, new_seed=-1):
         if self.is_animating:
             return
 
+        if new_seed == -1:
+            self.seed = random.randrange(sys.maxsize)
         self.grid = self.create_grid()
         self.path_colors = []
         self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
+        self.seed_label.config(text=f"Seed: {self.seed}")
 
     def run(self):
         self.root.mainloop()
