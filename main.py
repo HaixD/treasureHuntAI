@@ -82,47 +82,49 @@ class GridApp:
         )
         self.stats_label.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        # Button frame for better organization
+        # Frame for search algorithm buttons
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=(0, 10))
 
-        tk.Button(button_frame, text="Regenerate", command=self.regenerate_grid).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run BFS", command=self.run_bfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run Greedy", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run A*", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
 
-        # Seed controls frame
-        seed_frame = tk.Frame(self.root)
-        seed_frame.pack(pady=(0, 10))
+        # Frame for getting maze seed
+        cur_seed_frame = tk.Frame(self.root)
+        cur_seed_frame.pack(pady=(0, 10))
 
-        # Seed label
-        self.seed_label = tk.Label(seed_frame, text=f"Seed: {self.seed}", font=("Arial", 10))
-        self.seed_label.pack(side=tk.LEFT, padx=5)
+        self.cur_seed_label = tk.Label(cur_seed_frame, text=f"Current Seed: {self.seed}", font=("Arial", 11))
+        self.cur_seed_label.pack(side=tk.LEFT, padx=5)
+        tk.Button(cur_seed_frame, text="Copy", command=self.copy_seed).pack(side=tk.LEFT, padx=5)
 
-        # Entry to set seed
-        self.seed_entry = tk.Entry(seed_frame, width=10)
-        self.seed_entry.pack(side=tk.LEFT, padx=5)
+        # Frame for setting maze seed
+        set_seed_frame = tk.Frame(self.root)
+        set_seed_frame.pack(pady=(0, 10))
 
-        # Copy seed button
-        def copy_seed():
-            self.root.clipboard_clear()
-            self.root.clipboard_append(str(self.seed))
-
-        tk.Button(seed_frame, text="Copy Seed", command=copy_seed).pack(side=tk.LEFT, padx=5)
-
-        # Set seed button
-        def set_seed():
-            new_seed = int(self.seed_entry.get())
-            self.seed = new_seed
-            self.regenerate_grid(self.seed)
-
-        tk.Button(seed_frame, text="Set Seed", command=set_seed).pack(side=tk.LEFT, padx=5)
+        self.set_seed_label = tk.Label(set_seed_frame, text=f"Set Seed:", font=("Arial", 11))
+        self.set_seed_label.pack(side=tk.LEFT, padx=5)
+        self.set_seed_entry = tk.Entry(set_seed_frame, width=20)
+        self.set_seed_entry.pack(side=tk.LEFT, padx=5)
+        tk.Button(set_seed_frame, text="Set", command=lambda: self.set_seed(int(self.set_seed_entry.get()))).pack(side=tk.LEFT, padx=5)
+        tk.Button(set_seed_frame, text="Random", command=lambda: self.set_seed()).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
+
+    def copy_seed(self):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(str(self.seed))
+
+    def set_seed(self, new_seed=None):
+        if new_seed == None:
+            self.seed = random.randrange(sys.maxsize)
+        else:
+            self.seed = new_seed
+        self.regenerate_grid()
 
     def create_grid(self):
         rand = random.Random(self.seed)
@@ -596,17 +598,15 @@ class GridApp:
                         fill="black"
                     )
 
-    def regenerate_grid(self, new_seed=-1):
+    def regenerate_grid(self):
         if self.is_animating:
             return
 
-        if new_seed == -1:
-            self.seed = random.randrange(sys.maxsize)
         self.grid = self.create_grid()
         self.path_colors = []
         self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
-        self.seed_label.config(text=f"Seed: {self.seed}")
+        self.cur_seed_label.config(text=f"Seed: {self.seed}")
 
     def run(self):
         self.root.mainloop()
