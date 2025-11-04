@@ -7,7 +7,7 @@ import sys
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=10, treasure_total=1, trap_total=2, wall_total=5, cell_size=50):
+    def __init__(self, grid_size=10, treasure_total=10, trap_total=2, wall_total=5, cell_size=50):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -133,11 +133,13 @@ class GridApp:
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
         # Place treasures
+        self.treasure_pos = []
         treasure_count = 0
         while treasure_count < self.treasure_total:
             treasure_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
             if grid[treasure_pos] == self.EMPTY:
                 grid[treasure_pos] = self.TREASURE
+                self.treasure_pos.append(treasure_pos)
                 treasure_count += 1
 
         # Place traps
@@ -162,10 +164,7 @@ class GridApp:
         while start_pos in [treasure_pos, trap_pos]:
             start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
         grid[start_pos] = self.START
-
         self.start_pos = start_pos
-        # TODO: allow list of positions for treasure
-        self.treasure_pos = treasure_pos
 
         self.moves = []
 
