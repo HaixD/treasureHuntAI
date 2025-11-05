@@ -1,11 +1,11 @@
-import tkinter as tk
-import numpy as np
+import copy
 import random
+import tkinter as tk
 import heapq
 import time
 import sys
-import copy
 from collections import deque
+import numpy as np
 
 class GridApp:
     def __init__(self, grid_size=10, treasure_total=2, trap_total=2, wall_total=5):
@@ -108,12 +108,12 @@ class GridApp:
         set_seed_frame = tk.Frame(self.root)
         set_seed_frame.pack(pady=(0, 10))
 
-        self.set_seed_label = tk.Label(set_seed_frame, text=f"Set Seed:", font=("Arial", 11))
+        self.set_seed_label = tk.Label(set_seed_frame, text="Set Seed:", font=("Arial", 11))
         self.set_seed_label.pack(side=tk.LEFT, padx=5)
         self.set_seed_entry = tk.Entry(set_seed_frame, width=20)
         self.set_seed_entry.pack(side=tk.LEFT, padx=5)
         tk.Button(set_seed_frame, text="Set", command=lambda: self.set_seed(int(self.set_seed_entry.get()))).pack(side=tk.LEFT, padx=5)
-        tk.Button(set_seed_frame, text="Random", command=lambda: self.set_seed()).pack(side=tk.LEFT, padx=5)
+        tk.Button(set_seed_frame, text="Random", command=self.set_seed).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
@@ -124,7 +124,7 @@ class GridApp:
         self.root.clipboard_append(str(self.seed))
 
     def set_seed(self, new_seed=None):
-        if new_seed == None:
+        if new_seed is None:
             self.seed = random.randrange(sys.maxsize)
         else:
             self.seed = new_seed
@@ -224,8 +224,8 @@ class GridApp:
             raise ValueError("Points must have the same number of dimensions.")
 
         distance = 0
-        for i in range(len(p1)):
-            distance += abs(p1[i] - p2[i])
+        for a, b in zip(p1, p2):
+            distance += abs(a - b)
 
         return distance
 
@@ -244,7 +244,7 @@ class GridApp:
 
         while pq:
             # Get next best cost and position from priority queue
-            current_cost, current_pos = heapq.heappop(pq)
+            _, current_pos = heapq.heappop(pq)
 
             # Skip current position if already visited
             if current_pos in visited:
