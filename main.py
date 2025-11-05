@@ -230,6 +230,9 @@ class GridApp:
         return distance
 
     def get_closest_point(self, start, targets):
+        if not isinstance(targets, list):
+            return targets
+
         return min(targets, key=lambda cur: self.manhattan_distance(start, cur))
 
     def greedy(self, start, goal):
