@@ -4,16 +4,20 @@ import random
 import heapq
 import time
 import sys
+import copy
 from collections import deque
 
 class GridApp:
-    def __init__(self, grid_size=10, treasure_total=10, trap_total=2, wall_total=5, cell_size=50):
+    def __init__(self, grid_size=10, treasure_total=2, trap_total=2, wall_total=5):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
         self.wall_total = wall_total
-        self.cell_size = cell_size
         self.treasure_total = treasure_total
+
+        # Inversely scale cell size based on grid size
+        self.total_grid_pixels = 500
+        self.cell_size = self.total_grid_pixels // self.grid_size
 
         # Seed for random maze
         self.seed = random.randrange(sys.maxsize)
@@ -53,7 +57,7 @@ class GridApp:
         }
 
         # Animation settings
-        self.animation_speed = 10  # milliseconds between steps
+        self.animation_speed = 25  # milliseconds between steps
         self.is_animating = False
 
         # Initialize GUI
@@ -215,14 +219,18 @@ class GridApp:
         return valid_neighbors
 
     @staticmethod
-    def manhattan_distance(point1, point2):
-        if len(point1) != len(point2):
+    def manhattan_distance(p1, p2):
+        if len(p1) != len(p2):
             raise ValueError("Points must have the same number of dimensions.")
 
         distance = 0
-        for i in range(len(point1)):
-            distance += abs(point1[i] - point2[i])
+        for i in range(len(p1)):
+            distance += abs(p1[i] - p2[i])
+
         return distance
+
+    def get_closest_point(self, start, targets):
+        return min(targets, key=lambda cur: self.manhattan_distance(start, cur))
 
     def greedy(self, start, goal):
         pq = [(0, start)]           # Priority queue: (cost, position)
@@ -265,8 +273,6 @@ class GridApp:
                     heapq.heappush(pq, (new_cost, neighbor))
 
         return None, cells_expanded
-
-
 
     def run_greedy(self):
         if self.is_animating:
@@ -489,15 +495,27 @@ class GridApp:
 
         self.clear_path()
 
+        cur_pos = self.start_pos
+        treasure_pos = copy.deepcopy(self.treasure_pos)
+        treasure_count = len(self.treasure_pos)
+
+        path = []
+        cells_expanded = 0
         start_time = time.time()
-        result = self.ucs(self.start_pos, self.treasure_pos)
+        while treasure_count > 0:
+            closest_treasure_pos = self.get_closest_point(self.start_pos, treasure_pos)
+            result = self.ucs(cur_pos, closest_treasure_pos)
+            path += result[0]
+            cells_expanded += result[1]
+            cur_pos = closest_treasure_pos
+            treasure_pos.remove(closest_treasure_pos)
+            treasure_count -= 1
         end_time = time.time()
 
-        if result[0] is None:
+        if path is None:
             self.stats_label.config(text="UCS: No path found!")
             return
 
-        path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
@@ -605,7 +623,7 @@ class GridApp:
         self.path_colors = []
         self.stats_label.config(text="Run a search algorith m to see statistics")
         self.draw_grid()
-        self.cur_seed_label.config(text=f"Seed: {self.seed}")
+        self.cur_seed_label.config(text=f"Current Seed: {self.seed}")
 
     def run(self):
         self.root.mainloop()
@@ -613,4 +631,3 @@ class GridApp:
 if __name__ == "__main__":
     app = GridApp()
     app.run()
-
