@@ -9,7 +9,7 @@ from collections import deque
 import numpy as np
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total=2, trap_total=2, wall_total=5):
+    def __init__(self, grid_size=20, treasure_total=5, trap_total=5, wall_total=20):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -157,15 +157,15 @@ class GridApp:
                 grid[treasure_pos] = self.TREASURE
                 self.treasure_pos.append(treasure_pos)
                 treasure_count += 1
-
-        # Place traps
-        trap_count = 0
-        while trap_count < self.trap_total:
-            trap_pos = (rand.randrange(max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)),
-                        rand.randrange(max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)))
-            if grid[trap_pos] == self.EMPTY:
-                grid[trap_pos] = self.TRAP
-                trap_count += 1
+                # Place traps
+                trap_count = 0
+                while trap_count < self.trap_total:
+                    trap_pos = (rand.randrange(max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)),
+                                rand.randrange(max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)))
+                    if grid[trap_pos] == self.EMPTY:
+                        grid[trap_pos] = self.TRAP
+                        trap_count += 1
+        
 
         # Place walls
         wall_count = 0
@@ -306,19 +306,32 @@ class GridApp:
 
         self.clear_path()
 
+        cur_pos = self.start_pos
+        treasure_pos = copy.deepcopy(self.treasure_pos)
+        treasure_count = len(self.treasure_pos)
+
+        path = []
+        cells_expanded = 0
         start_time = time.time()
-        result = self.greedy(self.start_pos,self.treasure_pos)
+        while treasure_count > 0:
+            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
+            result = self.greedy(cur_pos, closest_treasure_pos)
+            path += result[0]
+            cells_expanded += result[1]
+            cur_pos = closest_treasure_pos
+            treasure_pos.remove(closest_treasure_pos)
+            treasure_count -= 1
         end_time = time.time()
 
-        if result[0] is None:
-            self.stats_label.config(text="Greedy: No path found!")
+        if path is None:
+            self.stats_label.config(text="greedy: No path found!")
             return
 
-        path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "Greedy")
+        self.animate_path(path, cells_expanded, execution_time, "greedt")
+
 
     def a_star(self, start, goal):
         pq = [(0, start)]           # Priority queue: (cost, position)
@@ -370,20 +383,31 @@ class GridApp:
 
         self.clear_path()
 
+        cur_pos = self.start_pos
+        treasure_pos = copy.deepcopy(self.treasure_pos)
+        treasure_count = len(self.treasure_pos)
+
+        path = []
+        cells_expanded = 0
         start_time = time.time()
-        result = self.a_star(self.start_pos,self.treasure_pos)
+        while treasure_count > 0:
+            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
+            result = self.a_star(cur_pos, closest_treasure_pos)
+            path += result[0]
+            cells_expanded += result[1]
+            cur_pos = closest_treasure_pos
+            treasure_pos.remove(closest_treasure_pos)
+            treasure_count -= 1
         end_time = time.time()
 
-        if result[0] is None:
-            self.stats_label.config(text="a_star: No path found!")
+        if path is None:
+            self.stats_label.config(text="astar: No path found!")
             return
 
-        path, cells_expanded = result
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "a_star")
-
 
     def bfs(self):
         queue = deque([[self.start_pos]])
