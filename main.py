@@ -9,7 +9,7 @@ from collections import deque
 import numpy as np
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total=5, trap_total=5, wall_total=20):
+    def __init__(self, grid_size=20, treasure_total=10, trap_total=2, wall_total=30):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -568,7 +568,7 @@ class GridApp:
         cells_expanded = 0
         start_time = time.time()
         while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(self.start_pos, treasure_pos)
+            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
             result = self.ucs(cur_pos, closest_treasure_pos)
             path += result[0]
             cells_expanded += result[1]
