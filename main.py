@@ -330,7 +330,7 @@ class GridApp:
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "greedt")
+        self.animate_path(path, cells_expanded, execution_time, "greedy")
 
 
     def a_star(self, start, goal):
