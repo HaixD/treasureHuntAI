@@ -9,7 +9,7 @@ from collections import deque
 import numpy as np
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total=10, trap_total=2, wall_total=30):
+    def __init__(self, grid_size=20, treasure_total=10, trap_total=4, wall_total=30):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -334,12 +334,15 @@ class GridApp:
 
 
     def a_star(self, start, goal):
-        pq = [(0, start)]           # Priority queue: (cost, position)
+       # pq = [(0, start)]           # Priority queue: (cost, position)
         visited = set()             # Record all fully explored cells so far
         parent = {start: None}      # Record best parents of each cell for path reconstruction
         cost = {start: 0}           # Record lowest costs to reach each cell
         cells_expanded = 0
-
+        cost = {start: 0}
+        h_start = self.manhattan_distance(start,goal)
+        f_start = cost[start] + h_start
+        pq = [(f_start, start)]
         while pq:
             # Get next best cost and position from priority queue
             current_cost, current_pos = heapq.heappop(pq)
@@ -363,15 +366,17 @@ class GridApp:
 
             # Otherwise, explore neighbors and get their costs
             for neighbor in self.get_neighbors(current_pos, include_traps=True):
-                new_cost = self.manhattan_distance(neighbor, goal) + current_cost + 1
+                step_cost = 1
                 if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
-                    new_cost += 4
-
+                    step_cost += 4
+                new_cost = cost[current_pos] + step_cost
                 # Update if this is a better path to neighbor
                 if neighbor not in cost or new_cost < cost[neighbor]:
                     cost[neighbor] = new_cost
                     parent[neighbor] = current_pos
-                    heapq.heappush(pq, (new_cost, neighbor))
+                    h_cost = self.manhattan_distance(neighbor, goal)
+                    new_f_cost = new_cost + h_cost
+                    heapq.heappush(pq, (new_f_cost, neighbor))
 
         return None, cells_expanded
 
