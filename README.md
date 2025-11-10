@@ -26,4 +26,4 @@ From the table above, we can see that A\* consistently has a lower path cost but
 # Screenshot
 ![Screenshot](./gui_screenshot.png)
 # Generative AI Statement
-No AI was used for assignment 2, but for assignment 1 we used AI to help us set up the grid.
+No AI was used for Assignment 2.
