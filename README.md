@@ -1,27 +1,26 @@
-How to run:
-Install NumPy if you don't have it already:
-run main.py
+# How to run:
+1. Install NumPy if you don't have it already
+2. run main.py
+- This will launch the GUI window where you can interact with the grid and run the search algorithms.
+# Implementation Details
+- **A\*:** A\* is almost the same as UCS except the value we pass to the priority queue along with any node is the manhattan distance from the goal + true cost
+- **Greedy:** Greedy also uses similar code as UCS except we no longer consider true cost and all nodes passed into the priority queue are paired with only their manhattan distance
+- **UCS Priority Queue:** The Uniform-Cost Search uses Python's heapq library to implement a priority queue
+- **DFS Stack (Recursive):** The Depth-First Search is implemented using recursion. The program's function call stack implicitly acts the data structure required for DFS.
+- **BFS Queue:** The Breadth-First Search algorithm uses a collections.deque object to store the paths to explore
+- **Grid:** The maze is represented by a 2D array. Each cell stores an integer code representing its state (TRAP, WALL, TREASURE, EMPTY)
+# Comparison
+|Algorithm|Seed               |Path Cost|Cells Expanded|Time (ms)|
+|---------|-------------------|---------|--------------|---------|
+|A\*      |6033585196692522394|108      |592           |5.997    |
+|Greedy   |6033585196692522394|120      |137           |2.002    |
+|A\*      |7210453983052381200|92       |422           |4.999    |
+|Greedy   |7210453983052381200|98       |115           |2.001    |
+|A\*      |2700272591481403539|74       |395           |4.000    |
+|Greedy   |2700272591481403539|82       |85            |1.000    |
 
-This will launch the GUI window where you can interact with the grid and run the search algorithms.
-
-Implementation Details
-Data Structures
-Grid: The maze is represented by a 2D array. Each cell stores an integer code representing its state (TRAP, WALL, TREASURE, EMPTY)
-BFS Queue: The Breadth-First Search algorithm uses a collections.deque object to store the paths to explore
-DFS Stack (Recursive): The Depth-First Search is implemented using recursion. The program's function call stack implicitly acts the data structure required for DFS.
-
-UCS Priority Queue: The Uniform-Cost Search uses Python's heapq library to implement a priority queue
-
-Design Decisions
-
-The application is encapsulated within a single GridApp class, which manages the grid state, GUI elements, and algorithm execution.
-
-GUI: Tkinter was chosen for its simplicity and inclusion in the Python standard library.The grid is drawn on a Canvas widget, with each cell represented by a colored rectangle and sometimes a symbol symbol.
-
-Algorithm Integration: Each search algorithm (bfs, dfs, ucs) is implemented as a method within the class. Helper methods (run_bfs, run_dfs, run_ucs) handle the setup ,clearing previous paths, execution.
-
-Path Visualization: A unique design choice was to render the found path not with a single color, but with a color gradient to make the direction of the path obvious. 
-<img width="1512" height="982" alt="Screenshot 2025-10-19 at 9 31 10 PM" src="https://github.com/user-attachments/assets/d6d0b1f2-bd9d-4c32-8513-c55a7ec8c54e" />
-<img width="1512" height="982" alt="Screenshot 2025-10-19 at 9 31 12 PM" src="https://github.com/user-attachments/assets/90d0e3d9-f5c7-4305-aa2c-b104ed01e170" />
-<img width="1512" height="982" alt="Screenshot 2025-10-19 at 9 31 14 PM" src="https://github.com/user-attachments/assets/743449a0-2567-46cd-9adc-d72e3dc43469" />
-
+From the table above, we can see that A\* consistently has a lower path cost but it also has a higher number of cells expanded (and time). This is to be expected since A\* has to check more nodes to truly determine a path to the goal has the lowest true cost.
+# Screenshot
+![Screenshot](./gui_screenshot.png)
+# Generative AI Statement
+No AI was used for assignment 2, but for assignment 1 we used AI to help us set up the grid.
