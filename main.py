@@ -263,6 +263,7 @@ class GridApp:
         visited = set()             # Record all fully explored cells so far
         parent = {start: None}      # Record best parents of each cell for path reconstruction
         cost = {start: 0}           # Record lowest costs to reach each cell
+        heuristics = {start: self.manhattan_distance(start, goal), goal: 0}
         cells_expanded = 0
 
         while pq:
@@ -282,12 +283,15 @@ class GridApp:
                 # Reconstruct path from start to goal
                 path = []
                 while current_pos is not None:
-                    path.append(current_pos)
+                    path.append((heuristics[current_pos], current_pos))
                     current_pos = parent[current_pos]
                 return path[::-1], cells_expanded
 
             # Otherwise, explore neighbors and get their costs
             for neighbor in self.get_neighbors(current_pos, include_traps=True):
+                heuristic = self.manhattan_distance(neighbor, goal)
+                heuristics[neighbor] = heuristic
+
                 new_cost = self.manhattan_distance(neighbor, goal)
                 if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
                     new_cost += 4
@@ -330,7 +334,8 @@ class GridApp:
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "greedy")
+        path_costs, path_positions = zip(*path)
+        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
 
 
     def a_star(self, start, goal):
@@ -338,6 +343,7 @@ class GridApp:
         visited = set()             # Record all fully explored cells so far
         parent = {start: None}      # Record best parents of each cell for path reconstruction
         cost = {start: 0}           # Record lowest costs to reach each cell
+        heuristics = {start: self.manhattan_distance(start, goal), goal: 0}
         cells_expanded = 0
 
         while pq:
@@ -357,13 +363,16 @@ class GridApp:
                 #Reconstruct path from start to goal
                 path = []
                 while current_pos is not None:
-                    path.append(current_pos)
+                    path.append((heuristics[current_pos], current_pos))
                     current_pos = parent[current_pos]
                 return path[::-1], cells_expanded
 
             # Otherwise, explore neighbors and get their costs
             for neighbor in self.get_neighbors(current_pos, include_traps=True):
-                new_cost = self.manhattan_distance(neighbor, goal) + current_cost + 1
+                heuristic = self.manhattan_distance(neighbor, goal)
+                heuristics[neighbor] = heuristic
+
+                new_cost = heuristic + current_cost + 1
                 if self.grid[neighbor[0], neighbor[1]] == self.TRAP:
                     new_cost += 4
 
@@ -374,8 +383,6 @@ class GridApp:
                     heapq.heappush(pq, (new_cost, neighbor))
 
         return None, cells_expanded
-
-
 
     def run_a_star(self):
         if self.is_animating:
@@ -407,7 +414,8 @@ class GridApp:
         execution_time = (end_time - start_time) * 1000
 
         # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "a_star")
+        path_costs, path_positions = zip(*path)
+        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
 
     def bfs(self):
         queue = deque([[self.start_pos]])
@@ -622,7 +630,7 @@ class GridApp:
         return colors
 
     # Animate the path cell by cell
-    def animate_path(self, path, cells_expanded, execution_time, algorithm_name):
+    def animate_path(self, path, cells_expanded, execution_time, algorithm_name, *, path_costs=None):
         """Animate the path drawing with gradient colors"""
         self.is_animating = True
         self.path_colors = {}
@@ -631,6 +639,31 @@ class GridApp:
         gradient_colors = self.generate_gradient_colors(len(path))
         for i, pos in enumerate(path):
             self.path_colors[pos] = gradient_colors[i]
+
+        def animate_costs():
+            if path_costs is None:
+                return
+            
+            drawn = set()
+            for i, position in zip(range(len(path) - 1, -1, -1), path[::-1]):
+                r, c = position
+                if position in drawn:
+                    continue
+                elif self.grid[r, c] != self.PATH:
+                    continue
+
+                drawn.add(position)
+                path_cost = path_costs[i]
+
+                x1, y1 = c * self.cell_size, r * self.cell_size
+                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                self.canvas.create_text(
+                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    text=str(path_cost),
+                    font=("Arial", int(self.cell_size / 2), "bold"),
+                    fill="black"
+                )
+
 
         # Animate step by step
         expected_draw_time = time.time()
@@ -647,10 +680,10 @@ class GridApp:
             if expected_draw_time > time.time(): # too fast:
                 time.sleep(expected_draw_time - time.time())
 
-                self.draw_grid()
+                self.draw_grid(callback=animate_costs)
                 self.root.update()
 
-        self.draw_grid()
+        self.draw_grid(callback=animate_costs)
         self.root.update()
 
         # Animation complete
@@ -659,7 +692,7 @@ class GridApp:
         stats_text = f"{algorithm_name} Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
         self.stats_label.config(text=stats_text)
 
-    def draw_grid(self):
+    def draw_grid(self, *, callback=lambda : None):
         self.canvas.delete("all")
 
         for r in range(self.grid_size):
@@ -685,6 +718,8 @@ class GridApp:
                         font=("Arial", int(self.cell_size / 2), "bold"),
                         fill="black"
                     )
+
+        callback()
 
     def regenerate_grid(self):
         if self.is_animating:
