@@ -10,16 +10,19 @@
 - **BFS Queue:** The Breadth-First Search algorithm uses a collections.deque object to store the paths to explore
 - **Grid:** The maze is represented by a 2D array. Each cell stores an integer code representing its state (TRAP, WALL, TREASURE, EMPTY)
 # Comparison
-|Algorithm|Seed               |Path Cost|Cells Expanded|Time (ms)|
-|---------|-------------------|---------|--------------|---------|
-|A\*      |6033585196692522394|108      |592           |5.997    |
-|Greedy   |6033585196692522394|120      |137           |2.002    |
-|A\*      |7210453983052381200|92       |422           |4.999    |
-|Greedy   |7210453983052381200|98       |115           |2.001    |
-|A\*      |2700272591481403539|74       |395           |4.000    |
-|Greedy   |2700272591481403539|82       |85            |1.000    |
+|Algorithm      |Seed               |Path Cost|Cells Expanded|Time (ms)|
+|---------------|-------------------|---------|--------------|---------|
+|A\* (manhattan)|6033585196692522394|108      |592           |5.997    |
+|A\* (euclidean)|6033585196692522394|112      |375           |3.001    |
+|Greedy         |6033585196692522394|120      |137           |2.002    |
+|A\* (manhattan)|7210453983052381200|92       |422           |4.999    |
+|A\* (euclidean)|6033585196692522394|96       |252           |1.998    |
+|Greedy         |7210453983052381200|98       |115           |2.001    |
+|A\* (manhattan)|2700272591481403539|74       |395           |4.000    |
+|A\* (euclidean)|2700272591481403539|78       |193           |2.002    |
+|Greedy         |2700272591481403539|82       |85            |1.000    |
 
-From the table above, we can see that A\* consistently has a lower path cost but it also has a higher number of cells expanded (and time). This is to be expected since A\* has to check more nodes to truly determine a path to the goal has the lowest true cost.
+From the table above, we can see that A\* consistently has a lower path cost but it also has a higher number of cells expanded (and time). This is to be expected since A\* has to check more nodes to truly determine a path to the goal has the lowest true cost. When comparing the euclidean distance to manhattan distance, we see that manhattan performs better. Since euclidean assumes we can go straight to the goal, we end up with an inaccurate heuristic compared to manhattan. But the upside is that we expand less cells and performance is better.
 # Screenshot
 ![Screenshot](./gui_screenshot.png)
 # Generative AI Statement

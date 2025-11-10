@@ -95,7 +95,8 @@ class GridApp:
         tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Run Greedy", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run A*", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run A* (manhattan)", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Run A* (euclidean)", command=self.run_a_star_euclidean).pack(side=tk.LEFT, padx=5)
 
         # Frame for getting maze seed
         cur_seed_frame = tk.Frame(self.root)
@@ -242,6 +243,10 @@ class GridApp:
         return valid_neighbors
 
     @staticmethod
+    def euclidean_distance(p1, p2):
+        return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
+
+    @staticmethod
     def manhattan_distance(p1, p2):
         if len(p1) != len(p2):
             raise ValueError("Points must have the same number of dimensions.")
@@ -338,7 +343,7 @@ class GridApp:
         self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
 
 
-    def a_star(self, start, goal):
+    def a_star(self, start, goal, heuristic_func):
        # pq = [(0, start)]           # Priority queue: (cost, position)
         visited = set()             # Record all fully explored cells so far
         parent = {start: None}      # Record best parents of each cell for path reconstruction
@@ -380,7 +385,7 @@ class GridApp:
                 if neighbor not in cost or new_cost < cost[neighbor]:
                     cost[neighbor] = new_cost
                     parent[neighbor] = current_pos
-                    h_cost = self.manhattan_distance(neighbor, goal)
+                    h_cost = heuristic_func(neighbor, goal)
                     heuristics[neighbor] = h_cost
                     new_f_cost = new_cost + h_cost
                     heapq.heappush(pq, (new_f_cost, neighbor))
@@ -402,7 +407,40 @@ class GridApp:
         start_time = time.time()
         while treasure_count > 0:
             closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
-            result = self.a_star(cur_pos, closest_treasure_pos)
+            result = self.a_star(cur_pos, closest_treasure_pos, self.manhattan_distance)
+            path += result[0]
+            cells_expanded += result[1]
+            cur_pos = closest_treasure_pos
+            treasure_pos.remove(closest_treasure_pos)
+            treasure_count -= 1
+        end_time = time.time()
+
+        if path is None:
+            self.stats_label.config(text="astar: No path found!")
+            return
+
+        execution_time = (end_time - start_time) * 1000
+
+        # Animate solution path
+        path_costs, path_positions = zip(*path)
+        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
+
+    def run_a_star_euclidean(self):
+        if self.is_animating:
+            return
+
+        self.clear_path()
+
+        cur_pos = self.start_pos
+        treasure_pos = copy.deepcopy(self.treasure_pos)
+        treasure_count = len(self.treasure_pos)
+
+        path = []
+        cells_expanded = 0
+        start_time = time.time()
+        while treasure_count > 0:
+            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
+            result = self.a_star(cur_pos, closest_treasure_pos, self.euclidean_distance)
             path += result[0]
             cells_expanded += result[1]
             cur_pos = closest_treasure_pos
@@ -662,7 +700,7 @@ class GridApp:
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 self.canvas.create_text(
                     (x1 + x2) / 2, (y1 + y2) / 2,
-                    text=str(path_cost),
+                    text=str(round(path_cost)),
                     font=("Arial", int(self.cell_size / 2), "bold"),
                     fill="black"
                 )
