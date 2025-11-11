@@ -130,10 +130,7 @@ class GridApp:
     def get_seed_entry(self):
         value = self.set_seed_entry.get().strip()
 
-        if value == "":
-            return self.seed
-
-        return int(value)
+        return int(value) if value != "" else self.seed
 
     def get_path_score(self, path):
         cost = -len(path) / 2 # -0.5 pts per length
