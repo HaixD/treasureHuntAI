@@ -332,39 +332,6 @@ class GridApp:
 
         return None, cells_expanded
 
-    def run_greedy(self):
-        if self.is_animating:
-            return
-
-        self.clear_path()
-
-        cur_pos = self.start_pos
-        treasure_pos = copy.deepcopy(self.treasure_pos)
-        treasure_count = len(self.treasure_pos)
-
-        path = []
-        cells_expanded = 0
-        start_time = time.time()
-        while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
-            result = self.greedy(cur_pos, closest_treasure_pos)
-            path += result[0]
-            cells_expanded += result[1]
-            cur_pos = closest_treasure_pos
-            treasure_pos.remove(closest_treasure_pos)
-            treasure_count -= 1
-        end_time = time.time()
-
-        if path is None:
-            self.stats_label.config(text="greedy: No path found!")
-            return
-
-        execution_time = (end_time - start_time) * 1000
-
-        # Animate solution path
-        path_costs, path_positions = zip(*path)
-        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
-
     def a_star(self, start, goal, heuristic_func):
         # pq = [(0, start)]           # Priority queue: (cost, position)
         visited = set()             # Record all fully explored cells so far
@@ -413,72 +380,6 @@ class GridApp:
                     heapq.heappush(pq, (new_f_cost, neighbor))
 
         return None, cells_expanded
-
-    def run_a_star(self):
-        if self.is_animating:
-            return
-
-        self.clear_path()
-
-        cur_pos = self.start_pos
-        treasure_pos = copy.deepcopy(self.treasure_pos)
-        treasure_count = len(self.treasure_pos)
-
-        path = []
-        cells_expanded = 0
-        start_time = time.time()
-        while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
-            result = self.a_star(cur_pos, closest_treasure_pos, self.manhattan_distance)
-            path += result[0]
-            cells_expanded += result[1]
-            cur_pos = closest_treasure_pos
-            treasure_pos.remove(closest_treasure_pos)
-            treasure_count -= 1
-        end_time = time.time()
-
-        if path is None:
-            self.stats_label.config(text="astar: No path found!")
-            return
-
-        execution_time = (end_time - start_time) * 1000
-
-        # Animate solution path
-        path_costs, path_positions = zip(*path)
-        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
-
-    def run_a_star_euclidean(self):
-        if self.is_animating:
-            return
-
-        self.clear_path()
-
-        cur_pos = self.start_pos
-        treasure_pos = copy.deepcopy(self.treasure_pos)
-        treasure_count = len(self.treasure_pos)
-
-        path = []
-        cells_expanded = 0
-        start_time = time.time()
-        while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
-            result = self.a_star(cur_pos, closest_treasure_pos, self.euclidean_distance)
-            path += result[0]
-            cells_expanded += result[1]
-            cur_pos = closest_treasure_pos
-            treasure_pos.remove(closest_treasure_pos)
-            treasure_count -= 1
-        end_time = time.time()
-
-        if path is None:
-            self.stats_label.config(text="astar: No path found!")
-            return
-
-        execution_time = (end_time - start_time) * 1000
-
-        # Animate solution path
-        path_costs, path_positions = zip(*path)
-        self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
 
     def bfs(self):
         queue = deque([[self.start_pos]])
@@ -624,38 +525,6 @@ class GridApp:
                     heapq.heappush(pq, (new_cost, neighbor))
 
         return None, cells_expanded
-
-    def run_ucs(self):
-        if self.is_animating:
-            return
-
-        self.clear_path()
-
-        cur_pos = self.start_pos
-        treasure_pos = copy.deepcopy(self.treasure_pos)
-        treasure_count = len(self.treasure_pos)
-
-        path = []
-        cells_expanded = 0
-        start_time = time.time()
-        while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
-            result = self.ucs(cur_pos, closest_treasure_pos)
-            path += result[0]
-            cells_expanded += result[1]
-            cur_pos = closest_treasure_pos
-            treasure_pos.remove(closest_treasure_pos)
-            treasure_count -= 1
-        end_time = time.time()
-
-        if path is None:
-            self.stats_label.config(text="UCS: No path found!")
-            return
-
-        execution_time = (end_time - start_time) * 1000
-
-        # Animate solution path
-        self.animate_path(path, cells_expanded, execution_time, "UCS")
 
     def run_search(self, algorithm="UCS"):
         if self.is_animating:
