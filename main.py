@@ -579,15 +579,10 @@ class GridApp:
             self.animate_path(path_positions, cells_expanded, execution_time, algorithm, path_costs=path_costs)
 
     def clear_path(self):
-        for r in range(self.grid_size):
-            for c in range(self.grid_size):
-                match self.grid[r, c]:
-                    case self.PATH:
-                        self.grid[r, c] = self.EMPTY
-                    case self.TREASURE_COLLECTED:
-                        self.grid[r, c] = self.TREASURE
-                    case self.TRAP_TRIGGERED:
-                        self.grid[r, c] = self.TRAP
+        grid = self.grid
+        grid[grid == self.PATH] = self.EMPTY
+        grid[grid == self.TREASURE_COLLECTED] = self.TREASURE
+        grid[grid == self.TRAP_TRIGGERED] = self.TRAP
 
         self.draw_grid()
 
