@@ -719,13 +719,14 @@ class GridApp:
                     fill="black"
                 )
 
-
         # Animate step by step
         expected_draw_time = time.time()
         for i, (r, c) in enumerate(path):
             match self.grid[r, c]:
                 case self.EMPTY:
                     self.grid[r, c] = self.PATH
+                case self.TREASURE:
+                    self.grid[r, c] = self.TREASURE_COLLECTED
                 case self.TRAP:
                     self.grid[r, c] = self.TRAP_TRIGGERED
                 case _:
