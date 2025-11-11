@@ -90,12 +90,19 @@ class GridApp:
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=(0, 10))
 
-        tk.Button(button_frame, text="Run BFS", command=self.run_bfs).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run DFS", command=self.run_dfs).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run UCS", command=self.run_ucs).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run Greedy", command=self.run_greedy).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run A* (manhattan)", command=self.run_a_star).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Run A* (euclidean)", command=self.run_a_star_euclidean).pack(side=tk.LEFT, padx=5)
+        # Label that spans both rows, vertically centered
+        run_label = tk.Label(button_frame, text="Run:", font=("Arial", 11))
+        run_label.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
+
+        # Top row: non-heuristics algorithms
+        tk.Button(button_frame, text="BFS", command=lambda: self.run_search("BFS")).grid(row=0, column=1, padx=5, pady=3)
+        tk.Button(button_frame, text="DFS", command=lambda: self.run_search("DFS")).grid(row=0, column=2, padx=5, pady=3)
+        tk.Button(button_frame, text="UCS", command=lambda: self.run_search("UCS")).grid(row=0, column=3, padx=5, pady=3)
+
+        # Bottom row: heuristic-based algorithms
+        tk.Button(button_frame, text="Greedy", command=lambda: self.run_search("Greedy")).grid(row=1, column=1, padx=5, pady=3)
+        tk.Button(button_frame, text="A* (Manhattan)", command=lambda: self.run_search("A* (Manhattan)")).grid(row=1, column=2, padx=5, pady=3)
+        tk.Button(button_frame, text="A* (Euclidean)", command=lambda: self.run_search("A* (Euclidean)")).grid(row=1, column=3, padx=5, pady=3)
 
         # Frame for getting maze seed
         cur_seed_frame = tk.Frame(self.root)
@@ -649,6 +656,58 @@ class GridApp:
 
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "UCS")
+
+    def run_search(self, algorithm="UCS"):
+        if self.is_animating:
+            return
+
+        if algorithm.lower() == "bfs":
+            self.run_bfs()
+            return
+
+        if algorithm.lower() == "dfs":
+            self.run_dfs()
+            return
+
+        self.clear_path()
+
+        cur_pos = self.start_pos
+        treasure_pos = copy.deepcopy(self.treasure_pos)
+        treasure_count = len(self.treasure_pos)
+
+        path = []
+        cells_expanded = 0
+        start_time = time.time()
+        while treasure_count > 0:
+            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
+            match algorithm.lower():
+                case "ucs":
+                    result = self.ucs(cur_pos, closest_treasure_pos)
+                case "greedy":
+                    result = self.greedy(cur_pos, closest_treasure_pos)
+                case "a* (manhattan)":
+                    result = self.a_star(cur_pos, closest_treasure_pos, self.manhattan_distance)
+                case "a* (euclidean)":
+                    result = self.a_star(cur_pos, closest_treasure_pos, self.euclidean_distance)
+            path += result[0]
+            cells_expanded += result[1]
+            cur_pos = closest_treasure_pos
+            treasure_pos.remove(closest_treasure_pos)
+            treasure_count -= 1
+        end_time = time.time()
+
+        if path is None:
+            self.stats_label.config(text=f"{algorithm}: No path found!")
+            return
+
+        execution_time = (end_time - start_time) * 1000
+
+        # Animate solution path
+        if algorithm.lower() in ["bfs", "dfs", "ucs"]:
+            self.animate_path(path, cells_expanded, execution_time, algorithm)
+        else:
+            path_costs, path_positions = zip(*path)
+            self.animate_path(path_positions, cells_expanded, execution_time, algorithm, path_costs=path_costs)
 
     def clear_path(self):
         for r in range(self.grid_size):
