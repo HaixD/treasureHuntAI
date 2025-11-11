@@ -3,13 +3,12 @@ import random
 import tkinter as tk
 import heapq
 import time
-import sys
-from itertools import permutations
 from collections import deque
+from itertools import permutations
 import numpy as np
 
 class GridApp:
-    def __init__(self, grid_size=20, treasure_total=10, trap_total=2, wall_total=30):
+    def __init__(self, grid_size=10, treasure_total=2, trap_total=2, wall_total=5):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -21,7 +20,7 @@ class GridApp:
         self.cell_size = self.total_grid_pixels // self.grid_size
 
         # Seed for random maze
-        self.seed = random.randrange(sys.maxsize)
+        self.seed = self.get_random32()
 
         # Grid codes
         self.EMPTY = 0
@@ -112,36 +111,47 @@ class GridApp:
 
         self.set_seed_label = tk.Label(set_seed_frame, text="Set Seed:", font=("Arial", 11))
         self.set_seed_label.pack(side=tk.LEFT, padx=5)
-        self.set_seed_entry = tk.Entry(set_seed_frame, width=20)
+        self.set_seed_entry = tk.Entry(set_seed_frame, width=15)
         self.set_seed_entry.pack(side=tk.LEFT, padx=5)
-        tk.Button(set_seed_frame, text="Set", command=lambda: self.set_seed(int(self.set_seed_entry.get()))).pack(side=tk.LEFT, padx=5)
+        tk.Button(set_seed_frame, text="Set", command=lambda: self.set_seed(self.get_seed_entry())).pack(side=tk.LEFT, padx=5)
         tk.Button(set_seed_frame, text="Random", command=self.set_seed).pack(side=tk.LEFT, padx=5)
 
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
 
+    def get_seed_entry(self):
+        value = self.set_seed_entry.get().strip()
+
+        if value == "":
+            return self.seed
+
+        return int(value)
+
     def get_path_score(self, path):
         cost = -len(path) / 2 # -0.5 pts per length
-        
+
         for r, c in path:
-            if self.grid[r, c] == self.TRAP or self.grid[r, c] == self.TRAP_TRIGGERED: # -5 pts per trap
-                cost -= 5
+            if self.grid[r, c] == self.TRAP or self.grid[r, c] == self.TRAP_TRIGGERED:
+                cost -= 5  # -5 pts per trap
             elif self.grid[r, c] == self.TREASURE:
                 cost += 10
 
         return cost
 
+    # Copies current seed to the clipboard
     def copy_seed(self):
         self.root.clipboard_clear()
         self.root.clipboard_append(str(self.seed))
 
+    # Sets maze seed based on a given seed or a random 32-bit seed otherwise
     def set_seed(self, new_seed=None):
-        if new_seed is None:
-            self.seed = random.randrange(sys.maxsize)
-        else:
-            self.seed = new_seed
+        self.seed = new_seed if new_seed is not None else self.get_random32()
         self.regenerate_grid()
+
+    # Returns a random positive 32-bit number
+    def get_random32(self):
+        return random.randint(0, 2**32 - 1)
 
     def create_grid(self):
         rand = random.Random(self.seed)
@@ -158,15 +168,21 @@ class GridApp:
                 grid[treasure_pos] = self.TREASURE
                 self.treasure_pos.append(treasure_pos)
                 treasure_count += 1
-                # Place traps
-                trap_count = 0
-                while trap_count < self.trap_total:
-                    trap_pos = (rand.randrange(max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)),
-                                rand.randrange(max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)))
-                    if grid[trap_pos] == self.EMPTY:
-                        grid[trap_pos] = self.TRAP
-                        trap_count += 1
-        
+
+        # Place traps
+        trap_count = 0
+        while trap_count < self.trap_total:
+            trap_pos = (
+                rand.randrange(
+                    max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)
+                ),
+                rand.randrange(
+                    max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)
+                )
+            )
+            if grid[trap_pos] == self.EMPTY:
+                grid[trap_pos] = self.TRAP
+                trap_count += 1
 
         # Place walls
         wall_count = 0
@@ -185,8 +201,8 @@ class GridApp:
 
         self.moves = []
 
-        # make get neighbors point in the direction of the target first
-        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]): # prioritize horizontal
+        # make get neighbors point in the direction of the target first, prioritize horizontal
+        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]):
             if start_pos[1] < treasure_pos[1]: # go right first, left third
                 self.moves.append(lambda r, c : (r, c + 1))
                 self.moves.append(lambda r, c : (r, c - 1))
@@ -342,9 +358,8 @@ class GridApp:
         path_costs, path_positions = zip(*path)
         self.animate_path(path_positions, cells_expanded, execution_time, "a_star", path_costs=path_costs)
 
-
     def a_star(self, start, goal, heuristic_func):
-       # pq = [(0, start)]           # Priority queue: (cost, position)
+        # pq = [(0, start)]           # Priority queue: (cost, position)
         visited = set()             # Record all fully explored cells so far
         parent = {start: None}      # Record best parents of each cell for path reconstruction
         cost = {start: 0}           # Record lowest costs to reach each cell
@@ -356,7 +371,7 @@ class GridApp:
         pq = [(f_start, start)]
         while pq:
             # Get next best cost and position from priority queue
-            current_cost, current_pos = heapq.heappop(pq)
+            _, current_pos = heapq.heappop(pq)
 
             # Skip current position if already visited
             if current_pos in visited:
@@ -485,7 +500,7 @@ class GridApp:
             return
 
         self.clear_path()
-        print(self.manhattan_distance(self.treasure_pos, self.start_pos))
+        # print(self.manhattan_distance(self.start_pos, self.get_closest_point(self.start_pos, self.treasure_pos)))
         start_time = time.time()
         result = self.bfs()
         end_time = time.time()
@@ -531,25 +546,25 @@ class GridApp:
             return
 
         self.clear_path()
-        
+
         start_time = time.time()
-        
+
         min_result = (float('inf'), None)
         for move_order in GridApp.get_moves(): # try all moves with include_traps=False
             result = self.dfs(move_order=move_order, include_traps=False)
-            
+
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
 
-        
+
         for move_order in GridApp.get_moves(): # try all moves with include_traps=True
             result = self.dfs(move_order=move_order, include_traps=True)
-            
+
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
-                
+
         end_time = time.time()
-        
+
         # relay best result to user
         if min_result[1] is None:
             self.stats_label.config(text="DFS: No path found!")
@@ -672,7 +687,6 @@ class GridApp:
 
     # Animate the path cell by cell
     def animate_path(self, path, cells_expanded, execution_time, algorithm_name, *, path_costs=None):
-        """Animate the path drawing with gradient colors"""
         self.is_animating = True
         self.path_colors = {}
 
@@ -684,7 +698,7 @@ class GridApp:
         def animate_costs():
             if path_costs is None:
                 return
-            
+
             drawn = set()
             for i, position in zip(range(len(path) - 1, -1, -1), path[::-1]):
                 r, c = position
@@ -768,7 +782,7 @@ class GridApp:
 
         self.grid = self.create_grid()
         self.path_colors = []
-        self.stats_label.config(text="Run a search algorith m to see statistics")
+        self.stats_label.config(text="Run a search algorithm to see statistics")
         self.draw_grid()
         self.cur_seed_label.config(text=f"Current Seed: {self.seed}")
 
