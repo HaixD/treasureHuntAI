@@ -1,8 +1,9 @@
 import heapq
+from utils import get_neighbors
 from constants import Cell
 
 
-def greedy(grid, start, goal, get_neighbors_func, heuristic_func):
+def greedy(grid, start, goal, heuristic_func):
     pq = [(0, start)]  # Priority queue: (cost, position)
     visited = set()  # Record all fully explored cells so far
     parent = {start: None}  # Record best parents of each cell for path reconstruction
@@ -32,7 +33,7 @@ def greedy(grid, start, goal, get_neighbors_func, heuristic_func):
             return path[::-1], cells_expanded
 
         # Otherwise, explore neighbors and get their costs
-        for neighbor in get_neighbors_func(current_pos, include_traps=True):
+        for neighbor in get_neighbors(grid, current_pos, include_traps=True):
             heuristic = heuristic_func(neighbor, goal)
             heuristics[neighbor] = heuristic
 

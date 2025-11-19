@@ -1,11 +1,18 @@
 import copy
 import random
-import tkinter as tk
 import time
+import tkinter as tk
 import numpy as np
 from algorithms import bfs, dfs, ucs, greedy, a_star
 from constants import Cell, PATH_GRADIENT_START, PATH_GRADIENT_END
-from utils import euclidean_distance, manhattan_distance, get_moves
+from utils import (
+    euclidean_distance,
+    manhattan_distance,
+    get_closest_point,
+    get_moves,
+    get_random_seed,
+    generate_gradient_colors,
+)
 
 
 class GridApp:
@@ -21,7 +28,7 @@ class GridApp:
         self.cell_size = self.total_grid_pixels // self.grid_size
 
         # Seed for random maze
-        self.seed = self.get_random32()
+        self.seed = get_random_seed()
 
         # Gradient path colors
         self.path_colors = []
@@ -45,7 +52,7 @@ class GridApp:
         self.stats_label = tk.Label(
             self.root,
             text="Run a search algorithm to see statistics",
-            font=("Arial", 11, "bold"),
+            font=("Arial", 12, "bold"),
             justify=tk.CENTER,
             bg="white",
             fg="#333333",
@@ -148,12 +155,8 @@ class GridApp:
 
     # Sets maze seed based on a given seed or a random 32-bit seed otherwise
     def set_seed(self, new_seed=None):
-        self.seed = new_seed if new_seed is not None else self.get_random32()
+        self.seed = new_seed if new_seed is not None else get_random_seed()
         self.regenerate_grid()
-
-    # Returns a random positive 32-bit number
-    def get_random32(self):
-        return random.randint(0, 2**32 - 1)
 
     def create_grid(self):
         rand = random.Random(self.seed)
@@ -240,40 +243,13 @@ class GridApp:
 
         return grid
 
-    # Return valid neighbors for a given position
-    def get_neighbors(self, pos, moves=None, include_traps=False):
-        r, c = pos
-        valid_neighbors = []
-
-        moves = moves or next(get_moves())
-
-        for move in moves:
-            nr, nc = move(r, c)
-            if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
-                if (
-                    not include_traps
-                    and self.grid[nr, nc] not in [Cell.WALL, Cell.TRAP]
-                    or include_traps
-                    and self.grid[nr, nc] not in [Cell.WALL]
-                ):
-                    valid_neighbors.append((nr, nc))
-
-        return valid_neighbors
-
-    def get_closest_point(self, start, targets):
-        if not isinstance(targets, list):
-            return targets
-
-        return min(targets, key=lambda cur: manhattan_distance(start, cur))
-
     def run_bfs(self):
         if self.is_animating:
             return
 
         self.clear_path()
-        # print(self.manhattan_distance(self.start_pos, self.get_closest_point(self.start_pos, self.treasure_pos)))
         start_time = time.time()
-        result = bfs(self.grid, self.start_pos, self.get_neighbors)
+        result = bfs(self.grid, self.start_pos)
         end_time = time.time()
 
         if result[0] is None:
@@ -299,7 +275,6 @@ class GridApp:
             result = dfs(
                 self.grid,
                 self.start_pos,
-                self.get_neighbors,
                 move_order=move_order,
                 include_traps=False,
             )
@@ -311,7 +286,6 @@ class GridApp:
             result = dfs(
                 self.grid,
                 self.start_pos,
-                self.get_neighbors,
                 move_order=move_order,
                 include_traps=True,
             )
@@ -354,18 +328,17 @@ class GridApp:
         cells_expanded = 0
         start_time = time.time()
         while treasure_count > 0:
-            closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
+            closest_treasure_pos = get_closest_point(
+                cur_pos, treasure_pos, manhattan_distance
+            )
             match algorithm.lower():
                 case "ucs":
-                    result = ucs(
-                        self.grid, cur_pos, closest_treasure_pos, self.get_neighbors
-                    )
+                    result = ucs(self.grid, cur_pos, closest_treasure_pos)
                 case "greedy":
                     result = greedy(
                         self.grid,
                         cur_pos,
                         closest_treasure_pos,
-                        self.get_neighbors,
                         manhattan_distance,
                     )
                 case "a* (manhattan)":
@@ -373,7 +346,6 @@ class GridApp:
                         self.grid,
                         cur_pos,
                         closest_treasure_pos,
-                        self.get_neighbors,
                         manhattan_distance,
                     )
                 case "a* (euclidean)":
@@ -381,7 +353,6 @@ class GridApp:
                         self.grid,
                         cur_pos,
                         closest_treasure_pos,
-                        self.get_neighbors,
                         euclidean_distance,
                     )
             path += result[0]
@@ -418,24 +389,26 @@ class GridApp:
 
         self.draw_grid()
 
-    # Interpolate color for current cell of path between start and treasure
-    def interpolate_path_color(self, ratio):
-        start_r, start_g, start_b = PATH_GRADIENT_START
-        end_r, end_g, end_b = PATH_GRADIENT_END
+    # # Interpolate color for current cell of path between start and treasure
+    # def interpolate_path_color(self, ratio):
+    #     start_r, start_g, start_b = PATH_GRADIENT_START
+    #     end_r, end_g, end_b = PATH_GRADIENT_END
 
-        r = int(start_r + (end_r - start_r) * ratio)
-        g = int(start_g + (end_g - start_g) * ratio)
-        b = int(start_b + (end_b - start_b) * ratio)
+    #     r = int(start_r + (end_r - start_r) * ratio)
+    #     g = int(start_g + (end_g - start_g) * ratio)
+    #     b = int(start_b + (end_b - start_b) * ratio)
 
-        return f"#{r:02x}{g:02x}{b:02x}"
+    #     return f"#{r:02x}{g:02x}{b:02x}"
 
-    # Generate gradient colors for the entire path
-    def generate_gradient_colors(self, path_length):
-        colors = []
-        for i in range(path_length):
-            ratio = i / max(path_length - 1, 1)
-            colors.append(self.interpolate_path_color(ratio))
-        return colors
+    # # Generate gradient colors for the entire path
+    # def generate_gradient_colors(self, path_length):
+    #     colors = []
+    #     for i in range(path_length):
+    #         ratio = i / max(path_length - 1, 1)
+    #         colors.append(
+    #             interpolate_color(ratio, PATH_GRADIENT_START, PATH_GRADIENT_END)
+    #         )
+    #     return colors
 
     # Animate the path cell by cell
     def animate_path(
@@ -445,7 +418,9 @@ class GridApp:
         self.path_colors = {}
 
         # Calculate gradient colors for each path cell
-        gradient_colors = self.generate_gradient_colors(len(path))
+        gradient_colors = generate_gradient_colors(
+            len(path), PATH_GRADIENT_START, PATH_GRADIENT_END
+        )
         for i, pos in enumerate(path):
             self.path_colors[pos] = gradient_colors[i]
 

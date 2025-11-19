@@ -1,10 +1,10 @@
+from utils import get_neighbors
 from constants import Cell
 
 
 def dfs(
     grid,
     start_pos,
-    get_neighbors_func,
     position=None,
     path=None,
     visited=None,
@@ -21,23 +21,27 @@ def dfs(
 
     r, c = position
 
-    if grid[r, c] == Cell.WALL:  # invalid position
+    # invalid position
+    if grid[r, c] == Cell.WALL:
         return None, cells_expanded[0]
-    elif position in visited:  # already visited (avoid loops)
+
+    # already visited (avoid loops)
+    if position in visited:
         return None, cells_expanded[0]
-    elif grid[r, c] == Cell.TREASURE:  # found treasure
+
+    # found treasure
+    if grid[r, c] == Cell.TREASURE:
         cells_expanded[0] += 1
         return path + [position], cells_expanded[0]
 
     cells_expanded[0] += 1
     visited.add(position)
-    for cell in get_neighbors_func(
-        position, moves=move_order, include_traps=include_traps
+    for cell in get_neighbors(
+        grid, position, moves=move_order, include_traps=include_traps
     ):
         result, _ = dfs(
             grid,
             start_pos,
-            get_neighbors_func,
             cell,
             path + [position],
             visited,

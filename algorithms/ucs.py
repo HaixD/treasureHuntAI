@@ -1,8 +1,9 @@
 import heapq
+from utils import get_neighbors
 from constants import Cell
 
 
-def ucs(grid, start, goal, get_neighbors_func):
+def ucs(grid, start, goal):
     pq = [(0, start)]  # Priority queue: (cost, position)
     visited = set()  # Record all fully explored cells so far
     parent = {start: None}  # Record best parents of each cell for path reconstruction
@@ -31,7 +32,7 @@ def ucs(grid, start, goal, get_neighbors_func):
             return path[::-1], cells_expanded
 
         # Otherwise, explore neighbors and get their costs
-        for neighbor in get_neighbors_func(current_pos, include_traps=True):
+        for neighbor in get_neighbors(grid, current_pos, include_traps=True):
             new_cost = current_cost + 1
             if grid[neighbor[0], neighbor[1]] == Cell.TRAP:
                 new_cost += 4
