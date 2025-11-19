@@ -113,11 +113,18 @@ class GridApp:
         set_seed_frame = tk.Frame(self.root)
         set_seed_frame.pack(pady=(0, 10))
 
+        def validate_seed_input(text):
+            return text.isdigit() and int(text) < 2**32 and int(text) >= 0 or text == ""
+
+        vcmd = (self.root.register(validate_seed_input), "%P")
+
         self.set_seed_label = tk.Label(
             set_seed_frame, text="Set Seed:", font=("Arial", 11)
         )
         self.set_seed_label.pack(side=tk.LEFT, padx=5)
-        self.set_seed_entry = tk.Entry(set_seed_frame, width=15)
+        self.set_seed_entry = tk.Entry(
+            set_seed_frame, width=15, validate="key", validatecommand=vcmd
+        )
         self.set_seed_entry.pack(side=tk.LEFT, padx=5)
         tk.Button(
             set_seed_frame,
