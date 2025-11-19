@@ -495,7 +495,10 @@ class GridApp:
         # Animation complete
         self.is_animating = False
         path_cost = len(path) - 1
-        stats_text = f"{algorithm_name} Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
+        stats_text = (
+            f"{algorithm_name} Results:\nPath Cost: {path_cost} | "
+            + f"Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
+        )
         self.stats_label.config(text=stats_text)
 
     def draw_grid(self, *, callback=lambda: None):
