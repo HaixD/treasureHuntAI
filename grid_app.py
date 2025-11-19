@@ -16,12 +16,33 @@ from utils import (
 
 
 class GridApp:
-    def __init__(self, grid_size=10, treasure_total=2, trap_total=2, wall_total=5):
+    def __init__(
+        self,
+        grid_size=20,
+        treasure_total=2,
+        trap_total=4,
+        wall_total=15,
+        set_prompt=None,
+    ):
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
         self.wall_total = wall_total
         self.treasure_total = treasure_total
+
+        match set_prompt:
+            case 1:
+                self.set_start = (0, 0)
+                self.set_treasures = [(19, 19)]
+                self.set_traps = [(5, 5), (10, 14), (14, 7)]
+            case 2:
+                self.set_start = (10, 10)
+                self.set_treasures = [(3, 17), (17, 3)]
+                self.set_traps = [(3, 16), (4, 17), (16, 3), (17, 4)]
+            case _:
+                self.set_start = None
+                self.set_treasures = None
+                self.set_traps = None
 
         # Inversely scale cell size based on grid size
         self.total_grid_pixels = 500
@@ -175,10 +196,16 @@ class GridApp:
         self.treasure_pos = []
         treasure_count = 0
         while treasure_count < self.treasure_total:
-            treasure_pos = (
-                rand.randrange(self.grid_size),
-                rand.randrange(self.grid_size),
-            )
+            if self.set_treasures is not None and treasure_count < len(
+                self.set_treasures
+            ):
+                cur_treasure_pos = self.set_treasures[treasure_count]
+                treasure_pos = (cur_treasure_pos[0], cur_treasure_pos[1])
+            else:
+                treasure_pos = (
+                    rand.randrange(self.grid_size),
+                    rand.randrange(self.grid_size),
+                )
             if grid[treasure_pos] == Cell.EMPTY:
                 grid[treasure_pos] = Cell.TREASURE
                 self.treasure_pos.append(treasure_pos)
@@ -187,16 +214,20 @@ class GridApp:
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            trap_pos = (
-                rand.randrange(
-                    max(treasure_pos[0] - 2, 0),
-                    min(treasure_pos[0] + 2, self.grid_size),
-                ),
-                rand.randrange(
-                    max(treasure_pos[1] - 2, 0),
-                    min(treasure_pos[1] + 2, self.grid_size),
-                ),
-            )
+            if self.set_traps is not None and trap_count < len(self.set_traps):
+                cur_trap_pos = self.set_traps[trap_count]
+                trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
+            else:
+                trap_pos = (
+                    rand.randrange(
+                        max(treasure_pos[0] - 2, 0),
+                        min(treasure_pos[0] + 2, self.grid_size),
+                    ),
+                    rand.randrange(
+                        max(treasure_pos[1] - 2, 0),
+                        min(treasure_pos[1] + 2, self.grid_size),
+                    ),
+                )
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
                 trap_count += 1
@@ -210,7 +241,10 @@ class GridApp:
                 wall_count += 1
 
         # Place start
-        start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
+        if isinstance(self.set_start, tuple):
+            start_pos = (self.set_start[0], self.set_start[1])
+        else:
+            start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
         while start_pos in [treasure_pos, trap_pos]:
             start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
         grid[start_pos] = Cell.START
@@ -395,27 +429,6 @@ class GridApp:
         grid[grid == Cell.TRAP_TRIGGERED] = Cell.TRAP
 
         self.draw_grid()
-
-    # # Interpolate color for current cell of path between start and treasure
-    # def interpolate_path_color(self, ratio):
-    #     start_r, start_g, start_b = PATH_GRADIENT_START
-    #     end_r, end_g, end_b = PATH_GRADIENT_END
-
-    #     r = int(start_r + (end_r - start_r) * ratio)
-    #     g = int(start_g + (end_g - start_g) * ratio)
-    #     b = int(start_b + (end_b - start_b) * ratio)
-
-    #     return f"#{r:02x}{g:02x}{b:02x}"
-
-    # # Generate gradient colors for the entire path
-    # def generate_gradient_colors(self, path_length):
-    #     colors = []
-    #     for i in range(path_length):
-    #         ratio = i / max(path_length - 1, 1)
-    #         colors.append(
-    #             interpolate_color(ratio, PATH_GRADIENT_START, PATH_GRADIENT_END)
-    #         )
-    #     return colors
 
     # Animate the path cell by cell
     def animate_path(
