@@ -7,6 +7,7 @@ from algorithms import bfs, dfs, ucs, greedy, a_star
 from constants import Cell, PATH_GRADIENT_START, PATH_GRADIENT_END
 from utils import euclidean_distance, manhattan_distance, get_moves
 
+
 class GridApp:
     def __init__(self, grid_size=10, treasure_total=2, trap_total=2, wall_total=5):
         self.grid_size = grid_size
@@ -36,7 +37,7 @@ class GridApp:
         self.canvas = tk.Canvas(
             self.root,
             width=self.grid_size * self.cell_size,
-            height=self.grid_size * self.cell_size
+            height=self.grid_size * self.cell_size,
         )
         self.canvas.pack(padx=10, pady=10)
 
@@ -51,7 +52,7 @@ class GridApp:
             padx=15,
             pady=10,
             relief=tk.SOLID,
-            borderwidth=1
+            borderwidth=1,
         )
         self.stats_label.pack(fill=tk.X, padx=10, pady=(0, 10))
 
@@ -64,33 +65,61 @@ class GridApp:
         run_label.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
 
         # Top row: non-heuristics algorithms
-        tk.Button(button_frame, text="BFS", command=lambda: self.run_search("BFS")).grid(row=0, column=1, padx=5, pady=3)
-        tk.Button(button_frame, text="DFS", command=lambda: self.run_search("DFS")).grid(row=0, column=2, padx=5, pady=3)
-        tk.Button(button_frame, text="UCS", command=lambda: self.run_search("UCS")).grid(row=0, column=3, padx=5, pady=3)
+        tk.Button(
+            button_frame, text="BFS", command=lambda: self.run_search("BFS")
+        ).grid(row=0, column=1, padx=5, pady=3)
+        tk.Button(
+            button_frame, text="DFS", command=lambda: self.run_search("DFS")
+        ).grid(row=0, column=2, padx=5, pady=3)
+        tk.Button(
+            button_frame, text="UCS", command=lambda: self.run_search("UCS")
+        ).grid(row=0, column=3, padx=5, pady=3)
 
         # Bottom row: heuristic-based algorithms
-        tk.Button(button_frame, text="Greedy", command=lambda: self.run_search("Greedy")).grid(row=1, column=1, padx=5, pady=3)
-        tk.Button(button_frame, text="A* (Manhattan)", command=lambda: self.run_search("A* (Manhattan)")).grid(row=1, column=2, padx=5, pady=3)
-        tk.Button(button_frame, text="A* (Euclidean)", command=lambda: self.run_search("A* (Euclidean)")).grid(row=1, column=3, padx=5, pady=3)
+        tk.Button(
+            button_frame, text="Greedy", command=lambda: self.run_search("Greedy")
+        ).grid(row=1, column=1, padx=5, pady=3)
+        tk.Button(
+            button_frame,
+            text="A* (Manhattan)",
+            command=lambda: self.run_search("A* (Manhattan)"),
+        ).grid(row=1, column=2, padx=5, pady=3)
+        tk.Button(
+            button_frame,
+            text="A* (Euclidean)",
+            command=lambda: self.run_search("A* (Euclidean)"),
+        ).grid(row=1, column=3, padx=5, pady=3)
 
         # Frame for getting maze seed
         cur_seed_frame = tk.Frame(self.root)
         cur_seed_frame.pack(pady=(0, 10))
 
-        self.cur_seed_label = tk.Label(cur_seed_frame, text=f"Current Seed: {self.seed}", font=("Arial", 11))
+        self.cur_seed_label = tk.Label(
+            cur_seed_frame, text=f"Current Seed: {self.seed}", font=("Arial", 11)
+        )
         self.cur_seed_label.pack(side=tk.LEFT, padx=5)
-        tk.Button(cur_seed_frame, text="Copy", command=self.copy_seed).pack(side=tk.LEFT, padx=5)
+        tk.Button(cur_seed_frame, text="Copy", command=self.copy_seed).pack(
+            side=tk.LEFT, padx=5
+        )
 
         # Frame for setting maze seed
         set_seed_frame = tk.Frame(self.root)
         set_seed_frame.pack(pady=(0, 10))
 
-        self.set_seed_label = tk.Label(set_seed_frame, text="Set Seed:", font=("Arial", 11))
+        self.set_seed_label = tk.Label(
+            set_seed_frame, text="Set Seed:", font=("Arial", 11)
+        )
         self.set_seed_label.pack(side=tk.LEFT, padx=5)
         self.set_seed_entry = tk.Entry(set_seed_frame, width=15)
         self.set_seed_entry.pack(side=tk.LEFT, padx=5)
-        tk.Button(set_seed_frame, text="Set", command=lambda: self.set_seed(self.get_seed_entry())).pack(side=tk.LEFT, padx=5)
-        tk.Button(set_seed_frame, text="Random", command=self.set_seed).pack(side=tk.LEFT, padx=5)
+        tk.Button(
+            set_seed_frame,
+            text="Set",
+            command=lambda: self.set_seed(self.get_seed_entry()),
+        ).pack(side=tk.LEFT, padx=5)
+        tk.Button(set_seed_frame, text="Random", command=self.set_seed).pack(
+            side=tk.LEFT, padx=5
+        )
 
         # Draw grid
         self.grid = self.create_grid()
@@ -136,7 +165,10 @@ class GridApp:
         self.treasure_pos = []
         treasure_count = 0
         while treasure_count < self.treasure_total:
-            treasure_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
+            treasure_pos = (
+                rand.randrange(self.grid_size),
+                rand.randrange(self.grid_size),
+            )
             if grid[treasure_pos] == Cell.EMPTY:
                 grid[treasure_pos] = Cell.TREASURE
                 self.treasure_pos.append(treasure_pos)
@@ -147,11 +179,13 @@ class GridApp:
         while trap_count < self.trap_total:
             trap_pos = (
                 rand.randrange(
-                    max(treasure_pos[0] - 2, 0), min(treasure_pos[0] + 2, self.grid_size)
+                    max(treasure_pos[0] - 2, 0),
+                    min(treasure_pos[0] + 2, self.grid_size),
                 ),
                 rand.randrange(
-                    max(treasure_pos[1] - 2, 0), min(treasure_pos[1] + 2, self.grid_size)
-                )
+                    max(treasure_pos[1] - 2, 0),
+                    min(treasure_pos[1] + 2, self.grid_size),
+                ),
             )
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
@@ -176,33 +210,33 @@ class GridApp:
 
         # make get neighbors point in the direction of the target first, prioritize horizontal
         if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]):
-            if start_pos[1] < treasure_pos[1]: # go right first, left third
-                self.moves.append(lambda r, c : (r, c + 1))
-                self.moves.append(lambda r, c : (r, c - 1))
+            if start_pos[1] < treasure_pos[1]:  # go right first, left third
+                self.moves.append(lambda r, c: (r, c + 1))
+                self.moves.append(lambda r, c: (r, c - 1))
             else:
-                self.moves.append(lambda r, c : (r, c - 1))
-                self.moves.append(lambda r, c : (r, c + 1))
+                self.moves.append(lambda r, c: (r, c - 1))
+                self.moves.append(lambda r, c: (r, c + 1))
 
-            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
-                self.moves.insert(1, lambda r, c : (r + 1, c))
-                self.moves.append(lambda r, c : (r - 1, c))
+            if start_pos[0] < treasure_pos[0]:  # go down second, up fourth
+                self.moves.insert(1, lambda r, c: (r + 1, c))
+                self.moves.append(lambda r, c: (r - 1, c))
             else:
-                self.moves.insert(1, lambda r, c : (r - 1, c))
-                self.moves.append(lambda r, c : (r + 1, c))
-        else: # prioritize vertical
-            if start_pos[0] < treasure_pos[0]: # go down second, up fourth
-                self.moves.append(lambda r, c : (r + 1, c))
-                self.moves.append(lambda r, c : (r - 1, c))
+                self.moves.insert(1, lambda r, c: (r - 1, c))
+                self.moves.append(lambda r, c: (r + 1, c))
+        else:  # prioritize vertical
+            if start_pos[0] < treasure_pos[0]:  # go down second, up fourth
+                self.moves.append(lambda r, c: (r + 1, c))
+                self.moves.append(lambda r, c: (r - 1, c))
             else:
-                self.moves.append(lambda r, c : (r - 1, c))
-                self.moves.append(lambda r, c : (r + 1, c))
+                self.moves.append(lambda r, c: (r - 1, c))
+                self.moves.append(lambda r, c: (r + 1, c))
 
             if start_pos[1] < treasure_pos[1]:  # go right first, left third
-                self.moves.insert(1, lambda r, c : (r, c + 1))
-                self.moves.append(lambda r, c : (r, c - 1))
+                self.moves.insert(1, lambda r, c: (r, c + 1))
+                self.moves.append(lambda r, c: (r, c - 1))
             else:
-                self.moves.insert(1, lambda r, c : (r, c - 1))
-                self.moves.append(lambda r, c : (r, c + 1))
+                self.moves.insert(1, lambda r, c: (r, c - 1))
+                self.moves.append(lambda r, c: (r, c + 1))
 
         return grid
 
@@ -216,8 +250,12 @@ class GridApp:
         for move in moves:
             nr, nc = move(r, c)
             if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
-                if (not include_traps and self.grid[nr, nc] not in [Cell.WALL, Cell.TRAP]
-                        or include_traps and self.grid[nr, nc] not in [Cell.WALL]):
+                if (
+                    not include_traps
+                    and self.grid[nr, nc] not in [Cell.WALL, Cell.TRAP]
+                    or include_traps
+                    and self.grid[nr, nc] not in [Cell.WALL]
+                ):
                     valid_neighbors.append((nr, nc))
 
         return valid_neighbors
@@ -256,16 +294,27 @@ class GridApp:
 
         start_time = time.time()
 
-        min_result = (float('inf'), None)
-        for move_order in get_moves(): # try all moves with include_traps=False
-            result = dfs(self.grid, self.start_pos, self.get_neighbors, move_order=move_order, include_traps=False)
+        min_result = (float("inf"), None)
+        for move_order in get_moves():  # try all moves with include_traps=False
+            result = dfs(
+                self.grid,
+                self.start_pos,
+                self.get_neighbors,
+                move_order=move_order,
+                include_traps=False,
+            )
 
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
 
-
-        for move_order in get_moves(): # try all moves with include_traps=True
-            result = dfs(self.grid, self.start_pos, self.get_neighbors, move_order=move_order, include_traps=True)
+        for move_order in get_moves():  # try all moves with include_traps=True
+            result = dfs(
+                self.grid,
+                self.start_pos,
+                self.get_neighbors,
+                move_order=move_order,
+                include_traps=True,
+            )
 
             if result[0] and -self.get_path_score(result[0]) < min_result[0]:
                 min_result = (len(result[0]), result)
@@ -308,13 +357,33 @@ class GridApp:
             closest_treasure_pos = self.get_closest_point(cur_pos, treasure_pos)
             match algorithm.lower():
                 case "ucs":
-                    result = ucs(self.grid, cur_pos, closest_treasure_pos, self.get_neighbors)
+                    result = ucs(
+                        self.grid, cur_pos, closest_treasure_pos, self.get_neighbors
+                    )
                 case "greedy":
-                    result = greedy(self.grid, cur_pos, closest_treasure_pos, self.get_neighbors, manhattan_distance)
+                    result = greedy(
+                        self.grid,
+                        cur_pos,
+                        closest_treasure_pos,
+                        self.get_neighbors,
+                        manhattan_distance,
+                    )
                 case "a* (manhattan)":
-                    result = a_star(self.grid, cur_pos, closest_treasure_pos, self.get_neighbors, manhattan_distance)
+                    result = a_star(
+                        self.grid,
+                        cur_pos,
+                        closest_treasure_pos,
+                        self.get_neighbors,
+                        manhattan_distance,
+                    )
                 case "a* (euclidean)":
-                    result = a_star(self.grid, cur_pos, closest_treasure_pos, self.get_neighbors, euclidean_distance)
+                    result = a_star(
+                        self.grid,
+                        cur_pos,
+                        closest_treasure_pos,
+                        self.get_neighbors,
+                        euclidean_distance,
+                    )
             path += result[0]
             cells_expanded += result[1]
             cur_pos = closest_treasure_pos
@@ -333,7 +402,13 @@ class GridApp:
             self.animate_path(path, cells_expanded, execution_time, algorithm)
         else:
             path_costs, path_positions = zip(*path)
-            self.animate_path(path_positions, cells_expanded, execution_time, algorithm, path_costs=path_costs)
+            self.animate_path(
+                path_positions,
+                cells_expanded,
+                execution_time,
+                algorithm,
+                path_costs=path_costs,
+            )
 
     def clear_path(self):
         grid = self.grid
@@ -352,7 +427,7 @@ class GridApp:
         g = int(start_g + (end_g - start_g) * ratio)
         b = int(start_b + (end_b - start_b) * ratio)
 
-        return f'#{r:02x}{g:02x}{b:02x}'
+        return f"#{r:02x}{g:02x}{b:02x}"
 
     # Generate gradient colors for the entire path
     def generate_gradient_colors(self, path_length):
@@ -363,7 +438,9 @@ class GridApp:
         return colors
 
     # Animate the path cell by cell
-    def animate_path(self, path, cells_expanded, execution_time, algorithm_name, *, path_costs=None):
+    def animate_path(
+        self, path, cells_expanded, execution_time, algorithm_name, *, path_costs=None
+    ):
         self.is_animating = True
         self.path_colors = {}
 
@@ -390,10 +467,11 @@ class GridApp:
                 x1, y1 = c * self.cell_size, r * self.cell_size
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                 self.canvas.create_text(
-                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    (x1 + x2) / 2,
+                    (y1 + y2) / 2,
                     text=str(round(path_cost)),
                     font=("Arial", int(self.cell_size / 2), "bold"),
-                    fill="black"
+                    fill="black",
                 )
 
         # Animate step by step
@@ -410,7 +488,7 @@ class GridApp:
                     pass
 
             expected_draw_time += self.animation_speed / 1000
-            if expected_draw_time > time.time(): # too fast:
+            if expected_draw_time > time.time():  # too fast:
                 time.sleep(expected_draw_time - time.time())
 
                 self.draw_grid(callback=animate_costs)
@@ -425,7 +503,7 @@ class GridApp:
         stats_text = f"{algorithm_name} Results:\nPath Cost: {path_cost} | Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
         self.stats_label.config(text=stats_text)
 
-    def draw_grid(self, *, callback=lambda : None):
+    def draw_grid(self, *, callback=lambda: None):
         self.canvas.delete("all")
 
         for r in range(self.grid_size):
@@ -441,15 +519,18 @@ class GridApp:
                     color = value.color
 
                 # Draw background
-                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2, fill=color, outline="black"
+                )
 
                 # Add symbol
                 if value.symbol:
                     self.canvas.create_text(
-                        (x1 + x2) / 2, (y1 + y2) / 2,
+                        (x1 + x2) / 2,
+                        (y1 + y2) / 2,
                         text=value.symbol,
                         font=("Arial", int(self.cell_size / 2), "bold"),
-                        fill="black"
+                        fill="black",
                     )
 
         callback()

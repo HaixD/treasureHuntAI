@@ -1,11 +1,12 @@
 import heapq
 from constants import Cell
 
+
 def ucs(grid, start, goal, get_neighbors_func):
-    pq = [(0, start)]           # Priority queue: (cost, position)
-    visited = set()             # Record all fully explored cells so far
-    parent = {start: None}      # Record best parents of each cell for path reconstruction
-    cost = {start: 0}           # Record lowest costs to reach each cell
+    pq = [(0, start)]  # Priority queue: (cost, position)
+    visited = set()  # Record all fully explored cells so far
+    parent = {start: None}  # Record best parents of each cell for path reconstruction
+    cost = {start: 0}  # Record lowest costs to reach each cell
     cells_expanded = 0
 
     while pq:

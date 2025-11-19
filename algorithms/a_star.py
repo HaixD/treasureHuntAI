@@ -1,15 +1,16 @@
 import heapq
 from constants import Cell
 
+
 def a_star(grid, start, goal, get_neighbors_func, heuristic_func):
     # pq = [(0, start)]           # Priority queue: (cost, position)
-    visited = set()             # Record all fully explored cells so far
-    parent = {start: None}      # Record best parents of each cell for path reconstruction
-    cost = {start: 0}           # Record lowest costs to reach each cell
+    visited = set()  # Record all fully explored cells so far
+    parent = {start: None}  # Record best parents of each cell for path reconstruction
+    cost = {start: 0}  # Record lowest costs to reach each cell
     heuristics = {start: heuristic_func(start, goal), goal: 0}
     cells_expanded = 0
     cost = {start: 0}
-    h_start = heuristic_func(start,goal)
+    h_start = heuristic_func(start, goal)
     f_start = cost[start] + h_start
     pq = [(f_start, start)]
     while pq:
@@ -26,7 +27,7 @@ def a_star(grid, start, goal, get_neighbors_func, heuristic_func):
 
         # If goal state reached
         if current_pos == goal:
-            #Reconstruct path from start to goal
+            # Reconstruct path from start to goal
             path = []
             while current_pos is not None:
                 path.append((heuristics[current_pos], current_pos))

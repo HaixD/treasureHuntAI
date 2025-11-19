@@ -1,11 +1,12 @@
 import heapq
 from constants import Cell
 
+
 def greedy(grid, start, goal, get_neighbors_func, heuristic_func):
-    pq = [(0, start)]           # Priority queue: (cost, position)
-    visited = set()             # Record all fully explored cells so far
-    parent = {start: None}      # Record best parents of each cell for path reconstruction
-    cost = {start: 0}           # Record lowest costs to reach each cell
+    pq = [(0, start)]  # Priority queue: (cost, position)
+    visited = set()  # Record all fully explored cells so far
+    parent = {start: None}  # Record best parents of each cell for path reconstruction
+    cost = {start: 0}  # Record lowest costs to reach each cell
     heuristics = {start: heuristic_func(start, goal), goal: 0}
     cells_expanded = 0
 

@@ -1,6 +1,18 @@
 from constants import Cell
 
-def dfs(grid, start_pos, get_neighbors_func, position=None, path=None, visited=None, cells_expanded=None, *, move_order=None, include_traps=True):
+
+def dfs(
+    grid,
+    start_pos,
+    get_neighbors_func,
+    position=None,
+    path=None,
+    visited=None,
+    cells_expanded=None,
+    *,
+    move_order=None,
+    include_traps=True
+):
     position = position or start_pos
     path = path or []
     visited = visited or set()
@@ -19,8 +31,20 @@ def dfs(grid, start_pos, get_neighbors_func, position=None, path=None, visited=N
 
     cells_expanded[0] += 1
     visited.add(position)
-    for cell in get_neighbors_func(position, moves=move_order, include_traps=include_traps):
-        result, _ = dfs(grid, start_pos, get_neighbors_func, cell, path + [position], visited, cells_expanded, move_order=move_order, include_traps=include_traps)
+    for cell in get_neighbors_func(
+        position, moves=move_order, include_traps=include_traps
+    ):
+        result, _ = dfs(
+            grid,
+            start_pos,
+            get_neighbors_func,
+            cell,
+            path + [position],
+            visited,
+            cells_expanded,
+            move_order=move_order,
+            include_traps=include_traps,
+        )
         if result is not None:
             return result, cells_expanded[0]
 

@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class Cell(IntEnum):
     EMPTY = 0
     WALL = 1
@@ -20,7 +21,7 @@ class Cell(IntEnum):
             Cell.TREASURE_COLLECTED: "hot pink",
             Cell.TRAP: "sky blue",
             Cell.TRAP_TRIGGERED: "royal blue",
-            Cell.START: "light green"
+            Cell.START: "light green",
         }
 
         return colors.get(self)
@@ -34,10 +35,11 @@ class Cell(IntEnum):
             Cell.TREASURE_COLLECTED: "+",
             Cell.TRAP: "X",
             Cell.TRAP_TRIGGERED: "!",
-            Cell.START: "S"
+            Cell.START: "S",
         }
 
         return symbols.get(self)
+
 
 # Path gradient colors (start and end RGB values)
 # Start RGB:    (144, 238, 144)
