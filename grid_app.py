@@ -94,28 +94,30 @@ class GridApp:
 
         # Top row: non-heuristics algorithms
         tk.Button(
-            button_frame, text="BFS", command=lambda: self.run_search("BFS")
+            button_frame, text="BFS", command=lambda: self.run_search_algorithm("BFS")
         ).grid(row=0, column=1, padx=5, pady=3)
         tk.Button(
-            button_frame, text="DFS", command=lambda: self.run_search("DFS")
+            button_frame, text="DFS", command=lambda: self.run_search_algorithm("DFS")
         ).grid(row=0, column=2, padx=5, pady=3)
         tk.Button(
-            button_frame, text="UCS", command=lambda: self.run_search("UCS")
+            button_frame, text="UCS", command=lambda: self.run_search_algorithm("UCS")
         ).grid(row=0, column=3, padx=5, pady=3)
 
         # Bottom row: heuristic-based algorithms
         tk.Button(
-            button_frame, text="Greedy", command=lambda: self.run_search("Greedy")
+            button_frame,
+            text="Greedy",
+            command=lambda: self.run_search_algorithm("Greedy"),
         ).grid(row=1, column=1, padx=5, pady=3)
         tk.Button(
             button_frame,
             text="A* (Manhattan)",
-            command=lambda: self.run_search("A* (Manhattan)"),
+            command=lambda: self.run_search_algorithm("A* (Manhattan)"),
         ).grid(row=1, column=2, padx=5, pady=3)
         tk.Button(
             button_frame,
             text="A* (Euclidean)",
-            command=lambda: self.run_search("A* (Euclidean)"),
+            command=lambda: self.run_search_algorithm("A* (Euclidean)"),
         ).grid(row=1, column=3, padx=5, pady=3)
 
         # Frame for getting maze seed
@@ -164,17 +166,6 @@ class GridApp:
         value = self.set_seed_entry.get().strip()
 
         return int(value) if value != "" else self.seed
-
-    def get_path_score(self, path):
-        cost = -len(path) / 2  # -0.5 pts per length
-
-        for r, c in path:
-            if self.grid[r, c] == Cell.TRAP or self.grid[r, c] == Cell.TRAP_TRIGGERED:
-                cost -= 5  # -5 pts per trap
-            elif self.grid[r, c] == Cell.TREASURE:
-                cost += 10
-
-        return cost
 
     # Copies current seed to the clipboard
     def copy_seed(self):
@@ -284,6 +275,48 @@ class GridApp:
 
         return grid
 
+    def regenerate_grid(self):
+        if self.is_animating:
+            return
+
+        self.grid = self.create_grid()
+        self.path_colors = []
+        self.stats_label.config(text="Run a search algorithm to see statistics")
+        self.draw_grid()
+        self.cur_seed_label.config(text=f"Current Seed: {self.seed}")
+
+    def draw_grid(self, *, callback=lambda: None):
+        self.canvas.delete("all")
+
+        for r in range(self.grid_size):
+            for c in range(self.grid_size):
+                x1, y1 = c * self.cell_size, r * self.cell_size
+                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                value = Cell(self.grid[r, c])
+
+                # Use stored path color if available
+                if value == Cell.PATH and (r, c) in self.path_colors:
+                    color = self.path_colors[(r, c)]
+                else:
+                    color = value.color
+
+                # Draw background
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2, fill=color, outline="black"
+                )
+
+                # Add symbol
+                if value.symbol:
+                    self.canvas.create_text(
+                        (x1 + x2) / 2,
+                        (y1 + y2) / 2,
+                        text=value.symbol,
+                        font=("Arial", int(self.cell_size / 2), "bold"),
+                        fill="black",
+                    )
+
+        callback()
+
     def run_bfs(self):
         if self.is_animating:
             return
@@ -347,7 +380,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "DFS")
 
-    def run_search(self, algorithm="UCS"):
+    def run_search_algorithm(self, algorithm):
         if self.is_animating:
             return
 
@@ -421,6 +454,17 @@ class GridApp:
                 algorithm,
                 path_costs=path_costs,
             )
+
+    def get_path_score(self, path):
+        cost = -len(path) / 2  # -0.5 pts per length
+
+        for r, c in path:
+            if self.grid[r, c] == Cell.TRAP or self.grid[r, c] == Cell.TRAP_TRIGGERED:
+                cost -= 5  # -5 pts per trap
+            elif self.grid[r, c] == Cell.TREASURE:
+                cost += 10
+
+        return cost
 
     def clear_path(self):
         grid = self.grid
@@ -500,48 +544,6 @@ class GridApp:
             + f"Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
         )
         self.stats_label.config(text=stats_text)
-
-    def draw_grid(self, *, callback=lambda: None):
-        self.canvas.delete("all")
-
-        for r in range(self.grid_size):
-            for c in range(self.grid_size):
-                x1, y1 = c * self.cell_size, r * self.cell_size
-                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
-                value = Cell(self.grid[r, c])
-
-                # Use stored path color if available
-                if value == Cell.PATH and (r, c) in self.path_colors:
-                    color = self.path_colors[(r, c)]
-                else:
-                    color = value.color
-
-                # Draw background
-                self.canvas.create_rectangle(
-                    x1, y1, x2, y2, fill=color, outline="black"
-                )
-
-                # Add symbol
-                if value.symbol:
-                    self.canvas.create_text(
-                        (x1 + x2) / 2,
-                        (y1 + y2) / 2,
-                        text=value.symbol,
-                        font=("Arial", int(self.cell_size / 2), "bold"),
-                        fill="black",
-                    )
-
-        callback()
-
-    def regenerate_grid(self):
-        if self.is_animating:
-            return
-
-        self.grid = self.create_grid()
-        self.path_colors = []
-        self.stats_label.config(text="Run a search algorithm to see statistics")
-        self.draw_grid()
-        self.cur_seed_label.config(text=f"Current Seed: {self.seed}")
 
     def run(self):
         self.root.mainloop()
