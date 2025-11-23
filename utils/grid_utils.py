@@ -60,7 +60,7 @@ def get_neighbors(grid, pos, moves=None, include_traps=False):
 
     for move in moves:
         nr, nc = move(r, c)
-        if 0 <= nr < len(grid) and 0 <= nc < len(grid):
+        if 0 <= nr < len(grid) and 0 <= nc < len(grid[0]):
             if (
                 not include_traps
                 and grid[nr, nc] not in [Cell.WALL, Cell.TRAP]
