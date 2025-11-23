@@ -241,38 +241,6 @@ class GridApp:
         grid[start_pos] = Cell.START
         self.start_pos = start_pos
 
-        self.moves = []
-
-        # make get neighbors point in the direction of the target first, prioritize horizontal
-        if abs(treasure_pos[1] - start_pos[1]) > abs(treasure_pos[0] - start_pos[0]):
-            if start_pos[1] < treasure_pos[1]:  # go right first, left third
-                self.moves.append(lambda r, c: (r, c + 1))
-                self.moves.append(lambda r, c: (r, c - 1))
-            else:
-                self.moves.append(lambda r, c: (r, c - 1))
-                self.moves.append(lambda r, c: (r, c + 1))
-
-            if start_pos[0] < treasure_pos[0]:  # go down second, up fourth
-                self.moves.insert(1, lambda r, c: (r + 1, c))
-                self.moves.append(lambda r, c: (r - 1, c))
-            else:
-                self.moves.insert(1, lambda r, c: (r - 1, c))
-                self.moves.append(lambda r, c: (r + 1, c))
-        else:  # prioritize vertical
-            if start_pos[0] < treasure_pos[0]:  # go down second, up fourth
-                self.moves.append(lambda r, c: (r + 1, c))
-                self.moves.append(lambda r, c: (r - 1, c))
-            else:
-                self.moves.append(lambda r, c: (r - 1, c))
-                self.moves.append(lambda r, c: (r + 1, c))
-
-            if start_pos[1] < treasure_pos[1]:  # go right first, left third
-                self.moves.insert(1, lambda r, c: (r, c + 1))
-                self.moves.append(lambda r, c: (r, c - 1))
-            else:
-                self.moves.insert(1, lambda r, c: (r, c - 1))
-                self.moves.append(lambda r, c: (r, c + 1))
-
         return grid
 
     def regenerate_grid(self):
