@@ -1,9 +1,11 @@
 import numpy as np
-from utils import euclidean_distance
+from utils import manhattan_distance, euclidean_distance
 from utils import get_neighbors
+from algorithms import a_star
 from constants import Cell
 from dataclasses import dataclass
 from copy import deepcopy
+from collections import defaultdict
 
 @dataclass
 class Agent:
@@ -19,6 +21,7 @@ class Adversarial:
             self.children = []
             self.depth = 0 if parent is None else parent.depth + 1
             self.expanded = False
+            self.debug = {}
 
         def is_partial(self):
             return self.value is None
@@ -42,60 +45,57 @@ class Adversarial:
 
             self.expanded = True
 
-        def build_node(self):
+        def build_node(self, build_value=False):
             if not self.is_partial():
                 return
             
             move, agentIndex = self.state, self.get_agent_index()
             
             new_state = deepcopy(self.parent.state)
-            if move in new_state.treasures:
-                new_state.treasures.remove(move)
-                new_state.agents[agentIndex].treasures += 1
-
-            new_state.agents[agentIndex].position = move
-            new_state.paths[agentIndex].append(move)
+            new_state.apply_move(move, agentIndex)
 
             self.state = new_state
-            self.value = self.state.get_utility_value()
+
+            if build_value:
+                self.value = self.state.get_utility_value()
 
         def alpha_beta_minimax(self, limit):
             def dfs(node, alpha, beta):
                 if (node.expanded and node.is_leaf()) or (node.depth == self.depth + limit - 1):
-                    node.build_node()
+                    node.build_node(True)
                     return node.value
                 
                 node.build_node()
                 node.shallow_expand()
                 
-                agentIndex = node.get_agent_index()
+                agentIndex = node.get_agent_index(True)
 
-                for child in node.children:
-                    v = dfs(child, alpha, beta)
-                    if agentIndex == 0:
-                        node.value = node.value or -float('inf')
-                        node.value = max(node.value, v)
-                    else:
-                        node.value = node.value or float('inf')
-                        node.value = min(node.value, v)
-                return node.value
+                # for child in node.children:
+                #     v = dfs(child, alpha, beta)
+                #     if agentIndex == 0:
+                #         node.value = node.value or -float('inf')
+                #         node.value = max(node.value, v)
+                #     else:
+                #         node.value = node.value or float('inf')
+                #         node.value = min(node.value, v)
+                # return node.value
                 
-                # if agentIndex == 0:
-                #     for child in node.children:
-                #         v = dfs(child, alpha, beta)
-                #         alpha = max(alpha, v)
-                #         if alpha >= beta:
-                #             break
-                #     node.value = alpha
-                #     return alpha
-                # else:
-                #     for child in node.children:
-                #         v = dfs(child, alpha, beta)
-                #         beta = max(alpha, v)
-                #         if beta <= alpha:
-                #             break
-                #     node.value = beta
-                #     return beta
+                if agentIndex == 0:
+                    for child in node.children:
+                        v = dfs(child, alpha, beta)
+                        alpha = max(alpha, v)
+                        if alpha >= beta:
+                            break
+                    node.value = alpha
+                    return alpha
+                else:
+                    for child in node.children:
+                        v = dfs(child, alpha, beta)
+                        beta = max(alpha, v)
+                        if beta <= alpha:
+                            break
+                    node.value = beta
+                    return beta
 
             dfs(self, -float('inf'), float('inf'))
 
@@ -106,21 +106,17 @@ class Adversarial:
                 next_node = max(self.children, key=lambda node : node.value)
             else:
                 next_node = min(self.children, key=lambda node : node.value)
+
+            next_node.expanded = False
+            next_node.children = []
             
             return next_node
-
-        def foreach_leaf(self, function):
-            if not self.children:
-                return function(self, self.depth)
-            
-            for child in self.children:
-                child.foreach_leaf(function)
     
     def __init__(self, grid, start_pos1, start_pos2):
         self.grid = grid
         self.diagonal_length = euclidean_distance((0, 0), grid.shape) #this is the max distance possible between a point and treasure
-        self.agents = Agent(start_pos1), Agent(start_pos2)
-        self.paths = [[], []]
+        self.agents = (Agent(start_pos1), Agent(start_pos2))
+        self.paths = ([], [])
 
         self.treasures = set()
         for r, row in enumerate(self.grid):
@@ -132,7 +128,11 @@ class Adversarial:
         grid = deepcopy(self.grid)
         grid[*self.agents[0].position] = 8
         grid[*self.agents[1].position] = 9
-        return str(grid)
+        
+        text = str(grid)
+        text = text.replace('0', ' ').replace('8', 'A').replace('9', 'B')
+
+        return text
 
     def __deepcopy__(self, memo):
         copied = Adversarial(np.zeros((0, 0), dtype=int), self.agents[0].position, self.agents[1].position)
@@ -144,6 +144,14 @@ class Adversarial:
         copied.paths = deepcopy(self.paths)
         
         return copied
+
+    def apply_move(self, move, agentIndex):
+        if move in self.treasures:
+            self.treasures.remove(move)
+            self.agents[agentIndex].treasures += 1
+
+        self.agents[agentIndex].position = move
+        self.paths[agentIndex].append(move)
 
     def get_utility_value(self):
         MAX, MIN = self.agents
@@ -157,35 +165,51 @@ class Adversarial:
         
         max_cloest_treasure = float('inf')
         for treasure in self.treasures:
-            max_cloest_treasure = min(max_cloest_treasure, euclidean_distance(treasure, MAX.position))
+            max_cloest_treasure = min(max_cloest_treasure, len(a_star(self.grid, MAX.position, treasure, euclidean_distance)[0]))
 
         min_cloest_treasure = float('inf')
         for treasure in self.treasures:
-            min_cloest_treasure = min(min_cloest_treasure, euclidean_distance(treasure, MIN.position))
+            min_cloest_treasure = min(min_cloest_treasure, len(a_star(self.grid, MIN.position, treasure, euclidean_distance)[0]))
 
         closest_treasure_score = (self.diagonal_length - max_cloest_treasure) - (self.diagonal_length - min_cloest_treasure)
         owned_treasure_score = (MAX.treasures - MIN.treasures) * self.diagonal_length
 
         return closest_treasure_score + owned_treasure_score
     
-    def search(self, limit=5):
+    def search(self, limit=5, max_iterations=10000):
         root = Adversarial.Node(deepcopy(self))
 
-        try:
-            while root.state.treasures:
-                root.alpha_beta_minimax(limit)
-                root = root.get_next_node()
-                print(str(root.state).replace('0', ' '), end='\n\n')
-        except Exception: # PLACEHOLDER DEBUG
-            print('ERROR:')
-            print(root.children)
-            root.shallow_expand()
-            print(root.children)
+        for _ in range(max_iterations - 1):
+            if not root.state.treasures:
+                break
+            root.alpha_beta_minimax(limit)
+            root = root.get_next_node()
+            print(root.state, end='\n\n')
+        else:
+            root.alpha_beta_minimax(limit)
+
 
         return root
-    
+
 if __name__ == '__main__':
-    grid = np.zeros((15, 15), dtype=int)
-    grid[14, 13] = Cell.TREASURE
-    adversarial = Adversarial(grid, (0, 0), (0, 5))
+    grid = np.array([
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 2],
+    ], dtype=int)
+    adversarial = Adversarial(grid, (3, 1), (2, 1))
     node = adversarial.search()
+    def print_tree(node, depth=0):
+        rows = ['        ' * depth + row for row in str(node.state).split('\n')]
+        if 'punishment' in node.debug:
+            rows[0] += f' {node.state.get_utility_value()}'
+            rows[1] += f' {node.debug["punishment"]}'
+        rows[2] += f' {node.value}'
+        text = '\n'.join(rows)
+
+        print(text)
+        for child in node.children:
+            print_tree(child, depth + 1)
+
+    # print_tree(node)
