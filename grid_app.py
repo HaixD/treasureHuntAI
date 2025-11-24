@@ -63,9 +63,17 @@ class GridApp:
         self.animation_speed = 25  # milliseconds between steps
         self.is_animating = False
 
+        # Minimax depth setting
+        self.minimax_depth = 3  # Default depth
+
         # Initialize GUI
         self.root = tk.Tk()
         self.root.title("Treasure Hunt AI")
+
+        # Import ttk for native OS styling
+        from tkinter import ttk
+
+        self.ttk = ttk
 
         self.canvas = tk.Canvas(
             self.root,
@@ -128,8 +136,36 @@ class GridApp:
         tk.Button(
             button_frame,
             text="Minimax",
-            command=lambda: self.run_search_algorithm("Minimax"),
+            command=lambda: self.run_search_algorithm("Minimax (No Pruning)"),
+        ).grid(row=2, column=1, padx=5, pady=3)
+        tk.Button(
+            button_frame,
+            text="Minimax (Pruning)",
+            command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
+
+        # Frame for Minimax depth slider
+        depth_frame = tk.Frame(self.root)
+        depth_frame.pack(pady=(0, 10))
+
+        tk.Label(depth_frame, text="Minimax Depth:", font=("Arial", 11)).pack(
+            side=tk.LEFT, padx=5
+        )
+
+        self.depth_label = tk.Label(
+            depth_frame, text=str(self.minimax_depth), font=("Arial", 11, "bold")
+        )
+        self.depth_label.pack(side=tk.LEFT, padx=5)
+
+        self.depth_slider = ttk.Scale(
+            depth_frame,
+            from_=2,
+            to=4,
+            orient=tk.HORIZONTAL,
+            command=self.update_depth,
+        )
+        self.depth_slider.set(self.minimax_depth)
+        self.depth_slider.pack(side=tk.LEFT, padx=5)
 
         # Frame for getting maze seed
         cur_seed_frame = tk.Frame(self.root)
@@ -172,6 +208,11 @@ class GridApp:
         # Draw grid
         self.grid = self.create_grid()
         self.draw_grid()
+
+    def update_depth(self, value):
+        """Update the minimax depth when slider changes"""
+        self.minimax_depth = int(float(value))
+        self.depth_label.config(text=str(self.minimax_depth))
 
     def get_seed_entry(self):
         value = self.set_seed_entry.get().strip()
@@ -365,7 +406,7 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "DFS")
 
-    def run_minimax(self):
+    def run_minimax(self, use_pruning):
         if self.is_animating:
             return
 
@@ -389,7 +430,7 @@ class GridApp:
         start_time = time.time()
 
         minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
-        node, expansions = minimax.search(limit=2, prune=False)
+        node, expansions = minimax.search(limit=self.minimax_depth, prune=False)
 
         end_time = time.time()
 
@@ -414,8 +455,12 @@ class GridApp:
         if self.is_animating:
             return
 
-        if algorithm.lower() == "minimax":
-            self.run_minimax()
+        if algorithm.lower() == "minimax (no pruning)":
+            self.run_minimax(use_pruning=False)
+            return
+
+        if algorithm.lower() == "minimax (with pruning)":
+            self.run_minimax(use_pruning=True)
             return
 
         self.second_start_pos = None
