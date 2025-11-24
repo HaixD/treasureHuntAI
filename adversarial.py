@@ -82,17 +82,21 @@ class Adversarial:
                             node.value = min(node.value, v)
                     return node.value
                 
+                children = node.children.copy()
+                node.children = []
                 if agentIndex == 0:
-                    for child in node.children:
+                    for child in children:
                         v = dfs(child, alpha, beta)
+                        node.children.append(child)
                         alpha = max(alpha, v)
                         if alpha >= beta:
                             break
                     node.value = alpha
                     return alpha
                 else:
-                    for child in node.children:
+                    for child in children:
                         v = dfs(child, alpha, beta)
+                        node.children.append(child)
                         beta = max(alpha, v)
                         if beta <= alpha:
                             break
@@ -149,6 +153,7 @@ class Adversarial:
 
     def apply_move(self, move, agentIndex):
         if move in self.treasures:
+            self.grid[move] = Cell.EMPTY
             self.treasures.remove(move)
             self.agents[agentIndex].treasures += 1
 
@@ -198,7 +203,6 @@ class Adversarial:
                 break
             curr.alpha_beta_minimax(limit, prune)
             curr = curr.get_next_node()
-            print(curr.state, end='\n\n')
         else:
             curr.alpha_beta_minimax(limit, prune)
 
@@ -210,27 +214,52 @@ class Adversarial:
             return total + root.debug['expansions']
 
         return curr, get_expansions(root)
+    
+    def search_increment(self, state=None, *, limit=5, prune=False, move=None):
+        state = state or {
+            'curr': Adversarial.Node(deepcopy(self)),
+            'limit': limit,
+            'prune': prune
+        }
+
+        if move is not None:
+            state['curr'] = state['curr'].children[move]
+
+        state['curr'].alpha_beta_minimax(state['limit'], state['prune'])
+        state['curr'] = state['curr'].get_next_node()
+        state['curr'].shallow_expand()
+
+        if not state['curr'].state.treasures:
+            return state, []
+
+        return state, list(map(lambda node : node.state, state['curr'].children))
 
 if __name__ == '__main__':
     grid = np.array([
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 1, 0, 2],
+        [2, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 2],
     ], dtype=int)
-    adversarial = Adversarial(grid, (3, 1), (2, 1))
-    node, expansions = adversarial.search(limit=5, prune=True)
-    def print_tree(node, depth=0):
-        rows = ['        ' * depth + row for row in str(node.state).split('\n')]
-        if 'punishment' in node.debug:
-            rows[0] += f' {node.state.get_utility_value()}'
-            rows[1] += f' {node.debug["punishment"]}'
-        rows[2] += f' {node.value}'
-        text = '\n'.join(rows)
+    adversarial = Adversarial(grid, (2, 2), (3, 4))
+    # node, expansions = adversarial.search(limit=2, prune=False)
+    # def print_tree(node, depth=0):
+    #     rows = ['      ' * depth + row for row in str(node.state).split('\n')]
+    #     rows[0] += f' {round(node.value, 2)}'
+    #     text = '\n'.join(rows)
 
-        print(text)
-        for child in node.children:
-            print_tree(child, depth + 1)
+    #     print(text, end='\n\n')
+    #     node.children = sorted(node.children, key=lambda child : child.value, reverse=depth % 2)
+    #     for child in node.children:
+    #         print_tree(child, depth + 1)
 
-    # print_tree(node)
-    print(expansions)
+    # root = node
+    # while root.parent is not None:
+    #     root = root.parent
+        
+    # # print_tree(root)
+    state, moves = adversarial.search_increment()
+    print(state['curr'].state)
+    while moves:
+        state, moves = adversarial.search_increment(state, move=0)
+        print(state['curr'].state)
