@@ -1,11 +1,10 @@
 import numpy as np
-from utils import manhattan_distance, euclidean_distance
+from utils import euclidean_distance
 from utils import get_neighbors
 from algorithms import a_star
 from constants import Cell
 from dataclasses import dataclass
 from copy import deepcopy
-from collections import defaultdict
 
 @dataclass
 class Agent:
