@@ -430,7 +430,7 @@ class GridApp:
         start_time = time.time()
 
         minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
-        node, expansions = minimax.search(limit=self.minimax_depth, prune=False)
+        node, expansions = minimax.search(limit=self.minimax_depth, prune=use_pruning)
 
         end_time = time.time()
 
@@ -447,8 +447,21 @@ class GridApp:
         else:
             winner = [0, 1]
 
+        pruning_ratio = None
+        if use_pruning:
+            _, expansions_no_prune = minimax.search(
+                limit=self.minimax_depth, prune=False
+            )
+            pruning_ratio = np.round(expansions / expansions_no_prune, 2)
+
         self.animate_adversarial_path(
-            winner, paths[0], paths[1], expansions, execution_time, "Minimax"
+            winner,
+            paths[0],
+            paths[1],
+            expansions,
+            execution_time,
+            "Minimax",
+            pruning_ratio=pruning_ratio,
         )
 
     def run_search_algorithm(self, algorithm):
@@ -640,6 +653,7 @@ class GridApp:
         *,
         path1_costs=None,
         path2_costs=None,
+        pruning_ratio=None,
     ):
         self.is_animating = True
         self.path_colors = {}
@@ -768,6 +782,8 @@ class GridApp:
             f"{algorithm_name} Results:\nWinner: {winner_text} | Path A Cost: {path1_cost} | Path B Cost: {path2_cost}\n"
             + f"Total Cells Expanded: {total_cells_expanded} | Total Time: {total_execution_time:.3f} ms"
         )
+        if pruning_ratio is not None:
+            stats_text += f"\nPruning Ratio: {pruning_ratio:.2f}"
 
         self.stats_label.config(text=stats_text)
 
