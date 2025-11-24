@@ -59,7 +59,7 @@ class Adversarial:
             if build_value:
                 self.value = self.state.get_utility_value()
 
-        def alpha_beta_minimax(self, limit):
+        def alpha_beta_minimax(self, limit, prune=False):
             def dfs(node, alpha, beta):
                 if (node.expanded and node.is_leaf()) or (node.depth == self.depth + limit - 1):
                     node.build_node(True)
@@ -70,15 +70,16 @@ class Adversarial:
                 
                 agentIndex = node.get_agent_index(True)
 
-                # for child in node.children:
-                #     v = dfs(child, alpha, beta)
-                #     if agentIndex == 0:
-                #         node.value = node.value or -float('inf')
-                #         node.value = max(node.value, v)
-                #     else:
-                #         node.value = node.value or float('inf')
-                #         node.value = min(node.value, v)
-                # return node.value
+                if not prune:
+                    for child in node.children:
+                        v = dfs(child, alpha, beta)
+                        if agentIndex == 0:
+                            node.value = node.value or -float('inf')
+                            node.value = max(node.value, v)
+                        else:
+                            node.value = node.value or float('inf')
+                            node.value = min(node.value, v)
+                    return node.value
                 
                 if agentIndex == 0:
                     for child in node.children:
