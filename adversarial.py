@@ -20,7 +20,7 @@ class Adversarial:
             self.children = []
             self.depth = 0 if parent is None else parent.depth + 1
             self.expanded = False
-            self.debug = {}
+            self.debug = {'expansions': 0}
 
         def is_partial(self):
             return self.value is None
@@ -40,7 +40,8 @@ class Adversarial:
 
             valid_moves = get_neighbors(grid, agents[agentIndex].position, include_traps=True)
             for move in valid_moves:
-                self.children.append(Adversarial.Node(move, parent=self, is_partial=True))
+                child = Adversarial.Node(move, parent=self, is_partial=True)
+                self.children.append(child)
 
             self.expanded = True
 
@@ -56,7 +57,8 @@ class Adversarial:
             self.state = new_state
 
             if build_value:
-                self.value = self.state.get_utility_value()
+                self.value, expansions = self.state.get_utility_value_expansions()
+                self.debug['expansions'] = expansions
 
         def alpha_beta_minimax(self, limit, prune=False):
             def dfs(node, alpha, beta):
@@ -153,43 +155,61 @@ class Adversarial:
         self.agents[agentIndex].position = move
         self.paths[agentIndex].append(move)
 
-    def get_utility_value(self):
+    def get_utility_value_expansions(self):
         MAX, MIN = self.agents
         
         if len(self.treasures) == 0:
             if MAX.treasures > MIN.treasures:
-                return float('inf')
+                return float('inf'), 0
             elif MAX.treasures < MIN.treasures:
-                return -float('inf')
-            return 0
+                return -float('inf'), 0
+            return 0, 0
+        
+        total_cells_expanded = 0
         
         max_cloest_treasure = float('inf')
         for treasure in self.treasures:
-            max_cloest_treasure = min(max_cloest_treasure, len(a_star(self.grid, MAX.position, treasure, euclidean_distance)[0]))
+            path, cells_expanded = a_star(self.grid, MAX.position, treasure, euclidean_distance)
+            total_cells_expanded += cells_expanded
+            max_cloest_treasure = min(max_cloest_treasure, len(path))
 
         min_cloest_treasure = float('inf')
         for treasure in self.treasures:
-            min_cloest_treasure = min(min_cloest_treasure, len(a_star(self.grid, MIN.position, treasure, euclidean_distance)[0]))
+            path, cells_expanded = a_star(self.grid, MIN.position, treasure, euclidean_distance)
+            total_cells_expanded += cells_expanded
+            min_cloest_treasure = min(min_cloest_treasure, len(path))
 
         closest_treasure_score = (self.diagonal_length - max_cloest_treasure) - (self.diagonal_length - min_cloest_treasure)
         owned_treasure_score = (MAX.treasures - MIN.treasures) * self.diagonal_length
 
-        return closest_treasure_score + owned_treasure_score
+        score = closest_treasure_score + owned_treasure_score
+
+        return score, cells_expanded
     
-    def search(self, limit=5, max_iterations=10000):
+    def get_utility_value(self):
+        return self.get_utility_value_expansions()[0]
+    
+    def search(self, limit=5, prune=False, max_iterations=10000):
         root = Adversarial.Node(deepcopy(self))
+        curr = root
 
         for _ in range(max_iterations - 1):
-            if not root.state.treasures:
+            if not curr.state.treasures:
                 break
-            root.alpha_beta_minimax(limit)
-            root = root.get_next_node()
-            print(root.state, end='\n\n')
+            curr.alpha_beta_minimax(limit, prune)
+            curr = curr.get_next_node()
+            print(curr.state, end='\n\n')
         else:
-            root.alpha_beta_minimax(limit)
+            curr.alpha_beta_minimax(limit, prune)
 
+        def get_expansions(root):
+            total = 0
+            for child in root.children:
+                total += get_expansions(child)
 
-        return root
+            return total + root.debug['expansions']
+
+        return curr, get_expansions(root)
 
 if __name__ == '__main__':
     grid = np.array([
@@ -199,7 +219,7 @@ if __name__ == '__main__':
         [0, 0, 1, 0, 2],
     ], dtype=int)
     adversarial = Adversarial(grid, (3, 1), (2, 1))
-    node = adversarial.search()
+    node, expansions = adversarial.search(limit=5, prune=True)
     def print_tree(node, depth=0):
         rows = ['        ' * depth + row for row in str(node.state).split('\n')]
         if 'punishment' in node.debug:
@@ -213,3 +233,4 @@ if __name__ == '__main__':
             print_tree(child, depth + 1)
 
     # print_tree(node)
+    print(expansions)
