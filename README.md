@@ -1,29 +1,26 @@
 # How to run:
 1. Install NumPy if you don't have it already
 2. run main.py
-- This will launch the GUI window where you can interact with the grid and run the search algorithms.
-# Implementation Details
-- **A\*:** A\* is almost the same as UCS except the value we pass to the priority queue along with any node is the manhattan distance from the goal + true cost
-- **Greedy:** Greedy also uses similar code as UCS except we no longer consider true cost and all nodes passed into the priority queue are paired with only their manhattan distance
-- **UCS Priority Queue:** The Uniform-Cost Search uses Python's heapq library to implement a priority queue
-- **DFS Stack (Recursive):** The Depth-First Search is implemented using recursion. The program's function call stack implicitly acts the data structure required for DFS.
-- **BFS Queue:** The Breadth-First Search algorithm uses a collections.deque object to store the paths to explore
-- **Grid:** The maze is represented by a 2D array. Each cell stores an integer code representing its state (TRAP, WALL, TREASURE, EMPTY)
+    - this will launch the GUI window where you can interact with the grid and run the search algorithms.
+3. set the minimax depth to a to any desired value and click minimax or minimax (pruning) to perform minimax and alpha-beta pruning respectively
+    - these buttons are for **AI vs AI**. For **AI vs human**, click on a valid adjacent tile next to the **B tile**.
+# Utility Value Formula
+There are 2 components which make up the utility value
+- a treasure difference (number of teasures owned by MAX - number of treasured owned by MIN)
+- the distance between MAX and its closest treasure (based on A*), and the distance between MIN and its closest treasure (also based on A*).
+    - Because we want to penalize large distances and encourage shorter distances, we subtract the diagonal length of the grid by the A* distance (this assumes the diagonal length is the longest a path could be)
+    - We take the adjusted distance of MAX and subtract it by MIN's adjusted distance
+- when there are no treasures left the utility value will be either `float('inf')`, `-float('inf')`, or 0 depending who has more treasures
 # Comparison
-|Algorithm      |Seed               |Path Cost|Cells Expanded|Time (ms)|
-|---------------|-------------------|---------|--------------|---------|
-|A\* (manhattan)|6033585196692522394|108      |592           |5.997    |
-|A\* (euclidean)|6033585196692522394|112      |375           |3.001    |
-|Greedy         |6033585196692522394|120      |137           |2.002    |
-|A\* (manhattan)|7210453983052381200|92       |422           |4.999    |
-|A\* (euclidean)|6033585196692522394|96       |252           |1.998    |
-|Greedy         |7210453983052381200|98       |115           |2.001    |
-|A\* (manhattan)|2700272591481403539|74       |395           |4.000    |
-|A\* (euclidean)|2700272591481403539|78       |193           |2.002    |
-|Greedy         |2700272591481403539|82       |85            |1.000    |
+|Algorithm      |Seed               |Nodes Expanded|Execution Time (ms)|Outcome|
+|---------------|-------------------|--------------|-------------------|-------|
+|Minimax        |                   |              |                   |       |
+|Alpha-Beta     |                   |              |                   |       |
+|Minimax        |                   |              |                   |       |
+|Alpha-Beta     |                   |              |                   |       |
+- Here, we observed that alpha-beta runs noitceably faster while achieving the same end result. It also results in less nodes expanded. Another big factor for run time and number of nodes expanded is depth. In our testing, we found that high nodes (e.g. 10) are impractical because it takes too long.
 
-From the table above, we can see that A\* consistently has a lower path cost but it also has a higher number of cells expanded (and time). This is to be expected since A\* has to check more nodes to truly determine a path to the goal has the lowest true cost. When comparing the euclidean distance to manhattan distance, we see that manhattan performs better. Since euclidean assumes we can go straight to the goal, we end up with an inaccurate heuristic compared to manhattan. But the upside is that we expand less cells and performance is better.
 # Screenshot
-![Screenshot](./gui_screenshot.png)
+![Screenshot](./placeholder)
 # Generative AI Statement
-No AI was used for Assignment 2.
+No AI was used for Assignment 3.
