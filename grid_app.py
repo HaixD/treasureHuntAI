@@ -464,6 +464,11 @@ class GridApp:
             pruning_ratio=pruning_ratio,
         )
 
+        root = node
+        while root.parent is not None:
+            root = root.parent
+        Minimax.print_tree(minimax, root)
+
     def run_search_algorithm(self, algorithm):
         if self.is_animating:
             return

@@ -12,6 +12,7 @@ class Agent:
     treasures: int = 0
     traps: int = 0
 
+
 class Minimax:
     class Node:
         def __init__(self, adversarial_state, *, parent=None, is_partial=False):
@@ -130,7 +131,9 @@ class Minimax:
 
     def __init__(self, grid, start_pos1, start_pos2):
         self.grid = grid
-        self.max_treasure_distance = sum(grid.shape) * 2  # this is the max distance possible between a point and treasure
+        self.max_treasure_distance = (
+            sum(grid.shape) * 2
+        )  # this is the max distance possible between a point and treasure
         self.agents = (Agent(start_pos1), Agent(start_pos2))
         self.paths = ([], [])
 
@@ -207,8 +210,12 @@ class Minimax:
         closest_treasure_score = (self.max_treasure_distance - max_cloest_treasure) - (
             self.max_treasure_distance - min_cloest_treasure
         )
-        traps_difference_score = (MAX.traps - MIN.traps) * self.max_treasure_distance * 0.5
-        owned_treasure_score = (MAX.treasures - MIN.treasures) * self.max_treasure_distance
+        traps_difference_score = (
+            (MAX.traps - MIN.traps) * self.max_treasure_distance * 0.5
+        )
+        owned_treasure_score = (
+            MAX.treasures - MIN.treasures
+        ) * self.max_treasure_distance
 
         score = closest_treasure_score + traps_difference_score + owned_treasure_score
 
@@ -256,6 +263,18 @@ class Minimax:
             return state, []
 
         return state, list(map(lambda node: node.state, state["curr"].children))
+
+    def print_tree(self, node, depth=0):
+        rows = ["  " * depth + row for row in str(node.state).split("\n")]
+        rows[0] += f" {round(node.value, 2)}"
+        text = "\n".join(rows)
+
+        print(text, end="\n\n")
+        node.children = sorted(
+            node.children, key=lambda child: child.value, reverse=depth % 2
+        )
+        for child in node.children:
+            self.print_tree(child, depth + 1)
 
 
 if __name__ == "__main__":
