@@ -9,7 +9,12 @@ class Cell(IntEnum):
     TRAP = 4
     TRAP_TRIGGERED = 5
     START = 6
-    PATH = 7
+    START_FIRST = 7
+    START_SECOND = 8
+    PATH = 9
+    PATH_FIRST = 10
+    PATH_SECOND = 11
+    PATH_BOTH = 12
 
     @property
     def color(self):
@@ -22,6 +27,11 @@ class Cell(IntEnum):
             Cell.TRAP: "sky blue",
             Cell.TRAP_TRIGGERED: "royal blue",
             Cell.START: "light green",
+            Cell.START_FIRST: "tomato",
+            Cell.START_SECOND: "cornflower blue",
+            Cell.PATH_FIRST: "tomato",
+            Cell.PATH_SECOND: "cornflower blue",
+            Cell.PATH_BOTH: "dark orchid",
         }
 
         return colors.get(self)
@@ -36,6 +46,8 @@ class Cell(IntEnum):
             Cell.TRAP: "X",
             Cell.TRAP_TRIGGERED: "!",
             Cell.START: "S",
+            Cell.START_FIRST: "A",
+            Cell.START_SECOND: "B",
         }
 
         return symbols.get(self)

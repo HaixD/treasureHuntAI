@@ -4,6 +4,7 @@ import time
 import tkinter as tk
 import numpy as np
 from algorithms import bfs, dfs, ucs, greedy, a_star
+from algorithms.minimax import Minimax
 from constants import Cell, PATH_GRADIENT_START, PATH_GRADIENT_END
 from utils import (
     euclidean_distance,
@@ -29,6 +30,9 @@ class GridApp:
         self.trap_total = trap_total
         self.wall_total = wall_total
         self.treasure_total = treasure_total
+        self.first_start_pos = None
+        self.second_start_pos = None
+        self.treasure_pos = None
 
         match set_prompt:
             case 1:
@@ -50,6 +54,7 @@ class GridApp:
 
         # Seed for random maze
         self.seed = get_random_seed()
+        self.rand = random.Random(self.seed)
 
         # Gradient path colors
         self.path_colors = []
@@ -120,6 +125,12 @@ class GridApp:
             command=lambda: self.run_search_algorithm("A* (Euclidean)"),
         ).grid(row=1, column=3, padx=5, pady=3)
 
+        tk.Button(
+            button_frame,
+            text="Minimax",
+            command=lambda: self.run_search_algorithm("Minimax"),
+        ).grid(row=2, column=2, padx=5, pady=3)
+
         # Frame for getting maze seed
         cur_seed_frame = tk.Frame(self.root)
         cur_seed_frame.pack(pady=(0, 10))
@@ -178,7 +189,7 @@ class GridApp:
         self.regenerate_grid()
 
     def create_grid(self):
-        rand = random.Random(self.seed)
+        self.rand = random.Random(self.seed)
 
         # Create empty grid
         grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
@@ -194,8 +205,8 @@ class GridApp:
                 treasure_pos = (cur_treasure_pos[0], cur_treasure_pos[1])
             else:
                 treasure_pos = (
-                    rand.randrange(self.grid_size),
-                    rand.randrange(self.grid_size),
+                    self.rand.randrange(self.grid_size),
+                    self.rand.randrange(self.grid_size),
                 )
             if grid[treasure_pos] == Cell.EMPTY:
                 grid[treasure_pos] = Cell.TREASURE
@@ -210,11 +221,11 @@ class GridApp:
                 trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
             else:
                 trap_pos = (
-                    rand.randrange(
+                    self.rand.randrange(
                         max(treasure_pos[0] - 2, 0),
                         min(treasure_pos[0] + 2, self.grid_size),
                     ),
-                    rand.randrange(
+                    self.rand.randrange(
                         max(treasure_pos[1] - 2, 0),
                         min(treasure_pos[1] + 2, self.grid_size),
                     ),
@@ -226,7 +237,9 @@ class GridApp:
         # Place walls
         wall_count = 0
         while wall_count < self.wall_total:
-            r, c = rand.randrange(self.grid_size), rand.randrange(self.grid_size)
+            r, c = self.rand.randrange(self.grid_size), self.rand.randrange(
+                self.grid_size
+            )
             if grid[r, c] == Cell.EMPTY:
                 grid[r, c] = Cell.WALL
                 wall_count += 1
@@ -235,11 +248,15 @@ class GridApp:
         if isinstance(self.set_start, tuple):
             start_pos = (self.set_start[0], self.set_start[1])
         else:
-            start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
-        while start_pos in [treasure_pos, trap_pos]:
-            start_pos = (rand.randrange(self.grid_size), rand.randrange(self.grid_size))
+            while True:
+                start_pos = (
+                    self.rand.randrange(self.grid_size),
+                    self.rand.randrange(self.grid_size),
+                )
+                if start_pos not in [Cell.TREASURE, Cell.TRAP]:
+                    break
         grid[start_pos] = Cell.START
-        self.start_pos = start_pos
+        self.first_start_pos = start_pos
 
         return grid
 
@@ -291,7 +308,7 @@ class GridApp:
 
         self.clear_path()
         start_time = time.time()
-        result = bfs(self.grid, self.start_pos)
+        result = bfs(self.grid, self.first_start_pos)
         end_time = time.time()
 
         if result[0] is None:
@@ -316,7 +333,7 @@ class GridApp:
         for move_order in get_moves():  # try all moves with include_traps=False
             result = dfs(
                 self.grid,
-                self.start_pos,
+                self.first_start_pos,
                 move_order=move_order,
                 include_traps=False,
             )
@@ -327,7 +344,7 @@ class GridApp:
         for move_order in get_moves():  # try all moves with include_traps=True
             result = dfs(
                 self.grid,
-                self.start_pos,
+                self.first_start_pos,
                 move_order=move_order,
                 include_traps=True,
             )
@@ -348,9 +365,60 @@ class GridApp:
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "DFS")
 
+    def run_minimax(self):
+        if self.is_animating:
+            return
+
+        self.clear_path()
+
+        while True:
+            if self.second_start_pos is not None and self.second_start_pos not in [
+                Cell.TREASURE,
+                Cell.TRAP,
+            ]:
+                break
+            self.second_start_pos = (
+                self.rand.randrange(self.grid_size),
+                self.rand.randrange(self.grid_size),
+            )
+
+        self.grid[self.first_start_pos] = Cell.START_FIRST
+        self.grid[self.second_start_pos] = Cell.START_SECOND
+        self.draw_grid()
+
+        start_time = time.time()
+
+        minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
+        node, expansions = minimax.search(limit=2, prune=False)
+
+        end_time = time.time()
+
+        execution_time = (end_time - start_time) * 1000
+
+        agents = node.state.agents
+        paths = node.state.paths
+
+        # Determine winner by highest treasure count; if not, lowest path cost
+        if agents[0].treasures != agents[1].treasures:
+            winner = agents.index(max(agents, key=lambda a: a.treasures))
+        elif len(paths[0]) != len(paths[1]):
+            winner = paths.index(min(paths, key=len))
+        else:
+            winner = [0, 1]
+
+        self.animate_adversarial_path(
+            winner, paths[0], paths[1], expansions, execution_time, "Minimax"
+        )
+
     def run_search_algorithm(self, algorithm):
         if self.is_animating:
             return
+
+        if algorithm.lower() == "minimax":
+            self.run_minimax()
+            return
+
+        self.second_start_pos = None
 
         if algorithm.lower() == "bfs":
             self.run_bfs()
@@ -362,7 +430,7 @@ class GridApp:
 
         self.clear_path()
 
-        cur_pos = self.start_pos
+        cur_pos = self.first_start_pos
         treasure_pos = copy.deepcopy(self.treasure_pos)
         treasure_count = len(self.treasure_pos)
 
@@ -437,6 +505,9 @@ class GridApp:
     def clear_path(self):
         grid = self.grid
         grid[grid == Cell.PATH] = Cell.EMPTY
+        grid[grid == Cell.PATH_FIRST] = Cell.EMPTY
+        grid[grid == Cell.PATH_SECOND] = Cell.EMPTY
+        grid[grid == Cell.PATH_BOTH] = Cell.EMPTY
         grid[grid == Cell.TREASURE_COLLECTED] = Cell.TREASURE
         grid[grid == Cell.TRAP_TRIGGERED] = Cell.TRAP
 
@@ -511,6 +582,148 @@ class GridApp:
             f"{algorithm_name} Results:\nPath Cost: {path_cost} | "
             + f"Cells Expanded: {cells_expanded} | Time: {execution_time:.3f} ms"
         )
+        self.stats_label.config(text=stats_text)
+
+    def animate_adversarial_path(
+        self,
+        winner,
+        path1,
+        path2,
+        total_cells_expanded,
+        total_execution_time,
+        algorithm_name,
+        *,
+        path1_costs=None,
+        path2_costs=None,
+    ):
+        self.is_animating = True
+        self.path_colors = {}
+
+        def animate_costs():
+            if path1_costs is None:
+                return
+
+            drawn = set()
+            # Draw costs for first path
+            for i, position in zip(range(len(path1) - 1, -1, -1), path1[::-1]):
+                r, c = position
+                if position in drawn:
+                    continue
+                elif self.grid[r, c] != Cell.PATH:
+                    continue
+
+                drawn.add(position)
+                path_cost = path1_costs[i]
+
+                x1, y1 = c * self.cell_size, r * self.cell_size
+                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                self.canvas.create_text(
+                    (x1 + x2) / 2,
+                    (y1 + y2) / 2,
+                    text=str(round(path_cost)),
+                    font=("Arial", int(self.cell_size / 2), "bold"),
+                    fill="black",
+                )
+
+            # Draw costs for second path
+            if path2 is not None and path2_costs is not None:
+                for i, position in zip(range(len(path2) - 1, -1, -1), path2[::-1]):
+                    r, c = position
+                    if position in drawn:
+                        continue
+                    elif self.grid[r, c] != Cell.PATH:
+                        continue
+
+                    drawn.add(position)
+                    path_cost = path2_costs[i]
+
+                    x1, y1 = c * self.cell_size, r * self.cell_size
+                    x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                    self.canvas.create_text(
+                        (x1 + x2) / 2,
+                        (y1 + y2) / 2,
+                        text=str(round(path_cost)),
+                        font=("Arial", int(self.cell_size / 2), "bold"),
+                        fill="white",  # Different color for second path
+                    )
+
+        # Track which cells have been visited by each path
+        path1_cells = set()
+        path2_cells = set()
+
+        # Animate step by step, alternating between paths
+        expected_draw_time = time.time()
+        max_length = max(len(path1), len(path2) if path2 is not None else 0)
+
+        for i in range(max_length):
+            # Animate first path step
+            if i < len(path1):
+                r, c = path1[i]
+                path1_cells.add((r, c))
+
+                match self.grid[r, c]:
+                    case Cell.EMPTY:
+                        self.grid[r, c] = Cell.PATH_FIRST
+                    case Cell.PATH_SECOND:
+                        self.grid[r, c] = Cell.PATH_BOTH
+                    case Cell.TREASURE:
+                        self.grid[r, c] = Cell.TREASURE_COLLECTED
+                    case Cell.TRAP:
+                        self.grid[r, c] = Cell.TRAP_TRIGGERED
+                    case _:
+                        pass
+
+                expected_draw_time += self.animation_speed / 1000
+                if expected_draw_time > time.time():
+                    time.sleep(expected_draw_time - time.time())
+
+                self.draw_grid(callback=animate_costs)
+                self.root.update()
+
+            # Animate second path step
+            if path2 is not None and i < len(path2):
+                r, c = path2[i]
+                path2_cells.add((r, c))
+
+                match self.grid[r, c]:
+                    case Cell.EMPTY:
+                        self.grid[r, c] = Cell.PATH_SECOND
+                    case Cell.PATH_FIRST:
+                        self.grid[r, c] = Cell.PATH_BOTH
+                    case Cell.TREASURE:
+                        self.grid[r, c] = Cell.TREASURE_COLLECTED
+                    case Cell.TRAP:
+                        self.grid[r, c] = Cell.TRAP_TRIGGERED
+                    case _:
+                        pass
+
+                expected_draw_time += self.animation_speed / 1000
+                if expected_draw_time > time.time():
+                    time.sleep(expected_draw_time - time.time())
+
+                self.draw_grid(callback=animate_costs)
+                self.root.update()
+
+        self.draw_grid(callback=animate_costs)
+        self.root.update()
+
+        # Animation complete
+        self.is_animating = False
+
+        if winner == 0:
+            winner_text = "A"
+        elif winner == 1:
+            winner_text = "B"
+        else:
+            winner_text = "Tie"
+        path1_cost = len(path1) - 1
+        path2_cost = len(path2) - 1
+
+        stats_text = (
+            f"{algorithm_name} Results:\nWinner: {winner_text} | Path A Cost: {path1_cost} | Path B Cost: {path2_cost}\n"
+            + f"Total Cells Expanded: {total_cells_expanded} | Total Time: {total_execution_time:.3f} ms"
+        )
+
         self.stats_label.config(text=stats_text)
 
     def run(self):
