@@ -10,7 +10,7 @@ from utils import euclidean_distance, get_neighbors
 class Agent:
     position: tuple[float, float]
     treasures: int = 0
-
+    traps: int = 0
 
 class Minimax:
     class Node:
@@ -130,9 +130,7 @@ class Minimax:
 
     def __init__(self, grid, start_pos1, start_pos2):
         self.grid = grid
-        self.diagonal_length = euclidean_distance(
-            (0, 0), grid.shape
-        )  # this is the max distance possible between a point and treasure
+        self.max_treasure_distance = sum(grid.shape) * 2  # this is the max distance possible between a point and treasure
         self.agents = (Agent(start_pos1), Agent(start_pos2))
         self.paths = ([], [])
 
@@ -159,7 +157,7 @@ class Minimax:
             self.agents[1].position,
         )
         copied.grid = deepcopy(self.grid)
-        copied.diagonal_length = self.diagonal_length
+        copied.max_treasure_distance = self.max_treasure_distance
         copied.agents[0].treasures = self.agents[0].treasures
         copied.agents[1].treasures = self.agents[1].treasures
         copied.treasures = set(treasure for treasure in self.treasures)
@@ -172,6 +170,8 @@ class Minimax:
             self.grid[move] = Cell.EMPTY
             self.treasures.remove(move)
             self.agents[agentIndex].treasures += 1
+        elif self.grid[move] == Cell.TRAP:
+            self.agents[agentIndex].traps += 1
 
         self.agents[agentIndex].position = move
         self.paths[agentIndex].append(move)
@@ -204,12 +204,13 @@ class Minimax:
             total_cells_expanded += cells_expanded
             min_cloest_treasure = min(min_cloest_treasure, len(path))
 
-        closest_treasure_score = (self.diagonal_length - max_cloest_treasure) - (
-            self.diagonal_length - min_cloest_treasure
+        closest_treasure_score = (self.max_treasure_distance - max_cloest_treasure) - (
+            self.max_treasure_distance - min_cloest_treasure
         )
-        owned_treasure_score = (MAX.treasures - MIN.treasures) * self.diagonal_length
+        traps_difference_score = (MAX.traps - MIN.traps) * self.max_treasure_distance * 0.5
+        owned_treasure_score = (MAX.treasures - MIN.treasures) * self.max_treasure_distance
 
-        score = closest_treasure_score + owned_treasure_score
+        score = closest_treasure_score + traps_difference_score + owned_treasure_score
 
         return score, cells_expanded
 
