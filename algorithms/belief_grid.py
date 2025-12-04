@@ -25,6 +25,7 @@ class BeliefGrid:
         
         self.observations = [[[] for _ in range(len(grid[0]))] for _ in range(len(grid))]
         self.beliefs = [[None] * len(grid[0]) for _ in range(len(grid))]
+        self.overrides = [[None] * len(grid[0]) for _ in range(len(grid))]
         self.popped = set()
 
         self.treasures = 1
@@ -33,6 +34,19 @@ class BeliefGrid:
                 self.treasures += col == Cell.TREASURE
         self.decrement_treasure()
 
+    def override_belief(self, position, *, pop=True):
+        r, c = position
+        is_treasure = self.grid[r][c] == Cell.TREASURE
+        
+        self.overrides[r][c] = int(is_treasure)
+        self.beliefs[r][c] = self.overrides[r][c]
+
+        if is_treasure:
+            self.decrement_treasure()
+
+        if pop:
+            self.popped.add(position)
+
     def decrement_treasure(self):
         self.treasures -= 1
         self.prior = self.treasures / (len(self.grid) * len(self.grid[0]))
@@ -40,9 +54,23 @@ class BeliefGrid:
         for r, row in enumerate(self.beliefs):
             for c, col in enumerate(row):
                 if col is not None:
-                    self.update_posterior(r, c)
+                    self.update_posterior((r, c))
 
-    def scan(self, r, c):
+    def scan_neighbors(self, position):
+        r, c = position
+        h, w = len(self.grid), len(self.grid[0])
+       
+        def try_scan(r, c):
+            if 0 <= r < h and 0 <= c < w:
+                self.scan((r, c))
+
+        try_scan(r - 1, c)
+        try_scan(r + 1, c)
+        try_scan(r, c - 1)
+        try_scan(r, c + 1)
+
+    def scan(self, position):
+        r, c = position
         if self.grid[r][c] == Cell.TREASURE:
             if randint(1, 100) / 100 <= self.false_negative:
                 self.observations[r][c].append(0)
@@ -54,21 +82,13 @@ class BeliefGrid:
             else:
                 self.observations[r][c].append(0)
 
-        self.update_posterior(r, c)
+        self.update_posterior(position)
 
-    def scan_neighbors(self, r, c):
-        h, w = len(self.grid), len(self.grid[0])
-       
-        def try_scan(r, c):
-            if 0 <= r < h and 0 <= c < w:
-                self.scan(r, c)
-
-        try_scan(r - 1, c)
-        try_scan(r + 1, c)
-        try_scan(r, c - 1)
-        try_scan(r, c + 1)
-
-    def update_posterior(self, r, c):
+    def update_posterior(self, position):
+        r, c = position
+        if self.overrides[r][c] is not None:
+            return
+        
         true_positive = 1 - self.false_positive
         true_negative = 1 - self.false_negative
 
@@ -88,34 +108,34 @@ class BeliefGrid:
         self.beliefs[r][c] = T_posterior / (T_posterior + not_T_posterior)
 
     def pop(self, position=None, *, error=True):
-        output = (-1, None) # (belief, distance, position)
+        output = (float('inf'), float('inf'), None) # (belief, distance, position)
         for r, row in enumerate(self.beliefs):
             for c, belief in enumerate(row):
-                position = (r, c)
-                if belief is None or position in self.popped:
+                cell = (r, c)
+                if belief is None or cell in self.popped:
                     continue
 
-                distance = abs(r - position[0]) + abs(c - position[1])
+                distance = (abs(r - position[0]) + abs(c - position[1])) if position else float('inf')
+                output = min(output, (-belief, distance, cell))
 
-                if (belief > output[0]) or (position and belief == output[0] and distance < output[1]):
-                    output = (belief, distance, position)
+        cell = output[-1]
 
-        position = output[-1]
-
-        if position is None:
+        if cell is None:
             if error:
                 raise IndexError("pop from empty list")
         else:
-            self.popped.add(position)
+            self.popped.add(cell)
 
-        return position
+        return cell
 
     def get_entropy(self):
         entropy = 0
 
-        for row in self.beliefs:
-            for belief in row:
-                if belief is None:
+        for r, row in enumerate(self.beliefs):
+            for c, belief in enumerate(row):
+                if self.overrides[r][c] is not None:
+                    belief = self.overrides[r][c]
+                elif belief is None:
                     belief = self.prior
                 entropy += -belief * log(belief + 1e-12)
 
@@ -134,7 +154,8 @@ if __name__ == '__main__':
     h, w = len(grid), len(grid[0])
             
     belief_grid = BeliefGrid(grid, 0.2, 0.3)
-    belief_grid.scan_neighbors(0, 0)
-    belief_grid.scan_neighbors(0, 1)
-    belief_grid.scan_neighbors(1, 0)
-    print(belief_grid.pop())
+    for i in range(len(grid[0])):
+        belief_grid.scan_neighbors((2, i))
+    belief_grid.override_belief((5, 7), pop=True)
+    belief_grid.get_entropy()
+    
