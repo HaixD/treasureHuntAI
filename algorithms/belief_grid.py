@@ -1,5 +1,5 @@
 from math import log
-from random import randint
+from random import randint, seed
 from enum import IntEnum
 
 class Cell(IntEnum): # PLACEHOLDER
@@ -83,6 +83,18 @@ class BeliefGrid:
 
         self.update_posterior(r, c)
 
+    def scan_neighbors(self, r, c):
+        h, w = len(self.grid), len(self.grid[0])
+       
+        def try_scan(r, c):
+            if 0 <= r < h and 0 <= c < w:
+                self.scan(r, c)
+
+        try_scan(r - 1, c)
+        try_scan(r + 1, c)
+        try_scan(r, c - 1)
+        try_scan(r, c + 1)
+
     def update_posterior(self, r, c):
         true_positive = 1 - self.false_positive
         true_negative = 1 - self.false_negative
@@ -102,17 +114,20 @@ class BeliefGrid:
 
         self.beliefs[r][c] = T_posterior / (T_posterior + not_T_posterior)
 
-    def pop(self, *, error=True):
-        output = (-1, None) # (belief, position)
+    def pop(self, position=None, *, error=True):
+        output = (-1, None) # (belief, distance, position)
         for r, row in enumerate(self.beliefs):
             for c, belief in enumerate(row):
                 position = (r, c)
                 if belief is None or position in self.popped:
                     continue
 
-                output = max(output, (belief, position), key=lambda v : v[0])
+                distance = abs(r - position[0]) + abs(c - position[1])
 
-        position = output[1]
+                if (belief > output[0]) or (position and belief == output[0] and distance < output[1]):
+                    output = (belief, distance, position)
+
+        position = output[-1]
 
         if position is None:
             if error:
@@ -134,6 +149,8 @@ class BeliefGrid:
         return entropy
 
 if __name__ == '__main__':
+    seed(0)
+    
     grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -143,14 +160,8 @@ if __name__ == '__main__':
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
     h, w = len(grid), len(grid[0])
             
-    belief_grid = BeliefGrid(grid, 0.1, 0.2)
-    print(belief_grid.get_entropy())
-    for _ in range(len(grid) * len(grid[0]) * 100):
-        belief_grid.scan(randint(0, h - 1), randint(0, w - 1))
-    print(belief_grid.get_entropy())
-    for _ in range(4):
-        try:
-            r, c = belief_grid.pop()
-            print((r, c), grid[r][c] == 2)
-        except IndexError:
-            break
+    belief_grid = BeliefGrid(grid, 0.2, 0.3)
+    belief_grid.scan_neighbors(0, 0)
+    belief_grid.scan_neighbors(0, 1)
+    belief_grid.scan_neighbors(1, 0)
+    print(belief_grid.pop())
