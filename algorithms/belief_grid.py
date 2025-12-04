@@ -1,21 +1,8 @@
 from math import log
 from random import randint
 from enum import IntEnum
+from constants import Cell
 
-class Cell(IntEnum): # PLACEHOLDER
-    EMPTY = 0
-    WALL = 1
-    TREASURE = 2
-    TREASURE_COLLECTED = 3
-    TRAP = 4
-    TRAP_TRIGGERED = 5
-    START = 6
-    START_FIRST = 7
-    START_SECOND = 8
-    PATH = 9
-    PATH_FIRST = 10
-    PATH_SECOND = 11
-    PATH_BOTH = 12
 
 class BeliefGrid:
     def __init__(self, grid, false_positive, false_negative):
@@ -28,10 +15,11 @@ class BeliefGrid:
         self.overrides = [[None] * len(grid[0]) for _ in range(len(grid))]
         self.popped = set()
 
-        self.treasures = 1
+        self.treasures = 0
         for row in grid:
             for col in row:
-                self.treasures += col == Cell.TREASURE
+                if col == Cell.TREASURE:
+                    self.treasures += 1
         self.decrement_treasure()
 
     def override_belief(self, position, *, pop=True):
@@ -68,6 +56,8 @@ class BeliefGrid:
         try_scan(r + 1, c)
         try_scan(r, c - 1)
         try_scan(r, c + 1)
+        # need to scan own cell bru
+        try_scan(r,c)
 
     def scan(self, position):
         r, c = position
