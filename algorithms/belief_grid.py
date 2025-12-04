@@ -17,33 +17,6 @@ class Cell(IntEnum): # PLACEHOLDER
     PATH_SECOND = 11
     PATH_BOTH = 12
 
-def update_posterior(observations, prior, fp, fn):
-    true_positive = 1 - fp
-    true_negative = 1 - fn
-
-    T_likelihood = 1
-    not_T_likelihood = 1
-    for observation in observations:
-        if observation:
-            T_likelihood *= true_positive
-            not_T_likelihood *= fp
-        else:
-            T_likelihood *= fn
-            not_T_likelihood *= true_negative
-
-    T_posterior = prior * T_likelihood
-    not_T_posterior = (1 - prior)  * not_T_likelihood
-
-    return T_posterior / (T_posterior + not_T_posterior)
-
-res = update_posterior(
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-    2 / 70,
-    0.1,
-    0.2
-)
-##print(res)
-
 class BeliefGrid:
     def __init__(self, grid, false_positive, false_negative):
         self.grid = grid
