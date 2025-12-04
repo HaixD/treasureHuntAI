@@ -1,5 +1,5 @@
 from math import log
-from random import randint, seed
+from random import randint
 from enum import IntEnum
 
 class Cell(IntEnum): # PLACEHOLDER
@@ -142,8 +142,6 @@ class BeliefGrid:
         return entropy
 
 if __name__ == '__main__':
-    seed(0)
-    
     grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -151,11 +149,30 @@ if __name__ == '__main__':
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 2, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-    h, w = len(grid), len(grid[0])
-            
-    belief_grid = BeliefGrid(grid, 0.2, 0.3)
-    for i in range(len(grid[0])):
-        belief_grid.scan_neighbors((2, i))
-    belief_grid.override_belief((5, 7), pop=True)
-    belief_grid.get_entropy()
     
+    belief_grid = BeliefGrid(grid, false_negative=0.2, false_positive=0.3)
+
+    # walk along horizontal path and scan all neighbors
+    for i in range(len(grid[0])):
+        player_pos = (2, i)
+        belief_grid.override_belief(player_pos) # we know exactly what the cell we stand on contains
+        if grid[2][i] == Cell.TREASURE:
+            pass # treasure found
+        belief_grid.scan_neighbors(player_pos)  # we kind of know what the neighboring cells contain
+
+    # find best cell to walk towards
+    goal = belief_grid.pop(position=player_pos) # now you can walk towards goal like you did before
+
+    # assume we keep teleporting to the goal
+    player_pos = goal
+    while grid[player_pos[0]][player_pos[1]] != Cell.TREASURE:
+        player_pos = belief_grid.pop(player_pos) # pop will also return unscanned cells
+    belief_grid.decrement_treasure() # here, the player teleports to goal but never overrides the cell it stood on, we must call decrement manually
+
+    # scanning and overriding will decrease entropy because we learn more (overriding is more impactful)
+    initial_entropy = belief_grid.get_entropy() # entropy with 1 treasure left
+    belief_grid.override_belief((5, 7)) # treasure is automatically decremented
+    final_entropy = belief_grid.get_entropy() # entropy with no treasures left
+
+    assert(initial_entropy > final_entropy) # no error because we found out more information about the grid after overriding
+    assert(round(final_entropy, 4) == -0) # no error because we found 2/2 treasures and we know the rest of the cells aren't treasures
