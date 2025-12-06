@@ -1,3 +1,10 @@
+"""Bayesian belief tracking for treasure location estimation.
+
+This module implements a belief grid that maintains probability distributions over treasure
+locations using Bayesian inference with noisy sensor readings. The system handles false positives
+and false negatives in treasure detection.
+"""
+
 from math import log
 import random
 
@@ -10,7 +17,32 @@ except ModuleNotFoundError:
 
 
 class BeliefGrid:
+    """Maintains probabilistic beliefs about treasure locations on a grid.
+
+    This class uses Bayesian inference to update beliefs about where treasures are located based on
+    noisy sensor readings. It handles sensor errors including false positives (detecting treasure
+    when there is none) and false negatives (failing to detect treasure when it exists).
+
+    Attributes:
+        grid (list): The actual grid containing treasure and obstacle information.
+        rand (random.Random): Random number generator for simulating sensor noise.
+        false_positive (float): Probability of false positive sensor reading (0-1).
+        false_negative (float): Probability of false negative sensor reading (0-1).
+        popped (set): Set of positions that have been selected/visited.
+        treasures (int): Total number of treasures in the grid.
+        prior (float): Prior probability of treasure at any given position.
+        beliefs (list): 2D list of probability beliefs for each grid position.
+    """
+
     def __init__(self, grid, rand, false_positive, false_negative):
+        """Initialize a BeliefGrid with sensor noise parameters.
+
+        Args:
+            grid (list): 2D grid containing cell types including treasures.
+            rand (random.Random): Random number generator for sensor simulation.
+            false_positive (float): Probability of false positive (0-1).
+            false_negative (float): Probability of false negative (0-1).
+        """
         self.grid = grid
         self.rand = rand
         self.false_positive = false_positive
@@ -28,6 +60,15 @@ class BeliefGrid:
         self.beliefs = [[self.prior] * len(grid[0]) for _ in range(len(grid))]
 
     def scan(self, position):
+        """Perform a noisy sensor scan at the given position and update beliefs.
+
+        This simulates a sensor reading that may produce false positives or false negatives based on
+        the configured error rates. The belief probabilities for all grid positions are updated
+        using Bayesian inference.
+
+        Args:
+            position (tuple): Position to scan as (row, col).
+        """
         r, c = position
         true_negative = 1 - self.false_positive
         true_positive = 1 - self.false_negative
@@ -44,6 +85,17 @@ class BeliefGrid:
                 self.update_posterior(position, true_negative, self.false_negative)
 
     def update_posterior(self, position, self_chance, other_chance):
+        """Update belief probabilities using Bayesian inference.
+
+        This method applies Bayes' rule to update the posterior probabilities for all grid positions
+        based on a sensor reading. The scanned position is updated with self_chance while all other
+        positions are updated with other_chance. Probabilities are then normalized to sum to 1.
+
+        Args:
+            position (tuple): Position that was scanned as (row, col).
+            self_chance (float): Probability factor for the scanned position.
+            other_chance (float): Probability factor for all other positions.
+        """
         h, w = len(self.grid), len(self.grid[0])
 
         total = 0
@@ -61,6 +113,25 @@ class BeliefGrid:
                 self.beliefs[r][c] /= total
 
     def pop(self, position=None, *, error=True):
+        """Select and return the most likely treasure position.
+
+        This method selects the grid cell with the highest belief probability that hasn't been
+        selected before. When a position is provided, distance is used as a tiebreaker (closer
+        positions are preferred).
+
+        Args:
+            position (tuple, optional): Current position for distance calculation.
+                Defaults to None (distance not considered).
+            error (bool, optional): Whether to raise an error if no positions available.
+                Defaults to True.
+
+        Returns:
+            tuple or None: The selected position as (row, col), or None if no
+                positions are available.
+
+        Raises:
+            IndexError: If no positions are available and error=True.
+        """
         output = (float("inf"), float("inf"), None)  # (belief, distance, position)
         for r, row in enumerate(self.beliefs):
             for c, belief in enumerate(row):
@@ -86,6 +157,14 @@ class BeliefGrid:
         return cell
 
     def get_entropy(self):
+        """Calculate the entropy of the current belief distribution.
+
+        Entropy measures the uncertainty in the belief distribution. Higher entropy indicates more
+        uncertainty about treasure locations, while lower entropy indicates more confident beliefs.
+
+        Returns:
+            float: The Shannon entropy of the belief distribution.
+        """
         entropy = 0
 
         for row in self.beliefs:
