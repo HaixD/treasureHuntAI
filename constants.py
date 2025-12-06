@@ -1,3 +1,13 @@
+"""Cell types and visual properties for a treasure hunt grid game.
+
+This module defines the Cell enumeration which represents different states of cells in a grid-based
+treasure hunt game. Each cell type has associated visual properties (colors and symbols) for
+rendering the grid.
+
+The module also defines gradient colors for rendering paths from the start position to treasure
+locations.
+"""
+
 from enum import IntEnum
 
 
