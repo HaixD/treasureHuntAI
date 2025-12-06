@@ -1,9 +1,8 @@
 # How to run:
-1. Install NumPy if you don't have it already
+1. install NumPy if you don't have it already
 2. run main.py
     - this will launch the GUI window where you can interact with the grid and run the search algorithms.
-3. set the minimax depth to a to any desired value and click minimax or minimax (pruning) to perform minimax and alpha-beta pruning respectively
-    - these buttons are for **AI vs AI**. For **AI vs human**, click on a valid adjacent tile next to the **B tile**.
+3. select the option "Bayes()
 # Utility Value Formula
 There are 2 components which make up the utility value
 - a treasure difference (number of teasures owned by MAX - number of treasured owned by MIN)
