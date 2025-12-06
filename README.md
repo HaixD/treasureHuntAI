@@ -19,7 +19,13 @@ Beliefs are stored in a 2D list where each value is initialized to number of tre
 # Decision Policy
 WRITE DECISION POLICY HERE PLS
 
-# Experiments and Results
+# Grid Configuration
+grid_size=20
+treasure_total=2
+trap_total=2
+wall_total=15
+
+# Results
 |Noise Level|Average Steps|Average Scans|Average Entropy at Detection|Detection Accuracy|
 |-----------|-------------|-------------|----------------------------|------------------|
 |Low        |414.3        |501.2        |3.9159                      |100%              |
