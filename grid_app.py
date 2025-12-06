@@ -649,7 +649,7 @@ class GridApp:
             bg_obj.popped.clear()
 
 
-        bg = BeliefGrid(self.grid, false_positive=fp, false_negative=fn)
+        bg = BeliefGrid(self.grid, self.rand, false_positive=fp, false_negative=fn)
         
         curr_pos = self.first_start_pos
         path_history = [] 
