@@ -103,4 +103,6 @@ if __name__ == '__main__':
     
     belief_grid = BeliefGrid(grid, false_positive=0.1, false_negative=0.2)
     belief_grid.scan((0, 0))
+    belief_grid.scan((0, 1))
     print(*map(lambda row : list(map(lambda col : round(col, 3), row)), belief_grid.beliefs), sep='\n')
+    print(belief_grid.get_entropy())
