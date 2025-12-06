@@ -144,21 +144,21 @@ class GridApp:
             text="Minimax (Pruning)",
             command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
-        #button for Bayesian
+        # button for Bayesian
         tk.Button(
-            button_frame, 
-            text="Bayes (Low Noise)", 
-            command=lambda: self.run_bayesian_agent("Low")
+            button_frame,
+            text="Bayes (Low Noise)",
+            command=lambda: self.run_bayesian_agent("Low"),
         ).grid(row=3, column=1, padx=5, pady=3)
         tk.Button(
-            button_frame, 
-            text="Bayes (Med Noise)", 
-            command=lambda: self.run_bayesian_agent("Med")
+            button_frame,
+            text="Bayes (Med Noise)",
+            command=lambda: self.run_bayesian_agent("Med"),
         ).grid(row=3, column=1, padx=5, pady=3)
         tk.Button(
-            button_frame, 
-            text="Bayes (High Noise)", 
-            command=lambda: self.run_bayesian_agent("High")
+            button_frame,
+            text="Bayes (High Noise)",
+            command=lambda: self.run_bayesian_agent("High"),
         ).grid(row=3, column=1, padx=5, pady=3)
         # Frame for Minimax depth slider
         depth_frame = tk.Frame(self.root)
@@ -569,12 +569,13 @@ class GridApp:
                 algorithm,
                 path_costs=path_costs,
             )
+
     def run_bayesian_agent(self, noise_level="Low"):
         if self.is_animating:
             return
 
         self.clear_path()
-        
+
         if noise_level == "Low":
             fp, fn = 0.05, 0.05
         elif noise_level == "Medium":
@@ -585,60 +586,57 @@ class GridApp:
             fp, fn = 0.1, 0.1
 
         print(f"____________ Bayesian Search ({noise_level})__________________")
-        
+
         bg = BeliefGrid(self.grid, false_positive=fp, false_negative=fn)
         curr_pos = self.first_start_pos
-        path_history = [] 
+        path_history = []
         scans = 0
-        
+
         start_time = time.time()
         max_steps = self.grid_size * self.grid_size * 2
-        
+
         while bg.treasures > 0 and len(path_history) < max_steps:
 
             bg.scan(curr_pos)
             scans += 1
-            
+
             try:
                 target = bg.pop(position=curr_pos, error=False)
             except (IndexError, TypeError):
                 print("Bayesian Agent: No more targets found.")
                 break
-                
+
             if target is None:
                 break
 
-            path_result = a_star(
-                self.grid, 
-                curr_pos, 
-                target, 
-                manhattan_distance
-            )
-            
-            path_segment = path_result[0] 
-            
+            path_result = a_star(self.grid, curr_pos, target, manhattan_distance)
+
+            path_segment = path_result[0]
+
             if path_segment is None:
                 continue
 
-            if len(path_segment) > 0 and isinstance(path_segment[0], tuple) and len(path_segment[0]) == 2:
-                 # Unzip: separate costs and positions
-                 _, positions = zip(*path_segment)
+            if (
+                len(path_segment) > 0
+                and isinstance(path_segment[0], tuple)
+                and len(path_segment[0]) == 2
+            ):
+                # Unzip: separate costs and positions
+                _, positions = zip(*path_segment)
             else:
-                 positions = path_segment
+                positions = path_segment
 
             if len(path_history) > 0:
-                path_history.extend(positions[1:]) # Skip start node if continuing
+                path_history.extend(positions[1:])  # Skip start node if continuing
             else:
                 path_history.extend(positions)
-                
-            curr_pos = target 
+
+            curr_pos = target
 
         end_time = time.time()
         execution_time = (end_time - start_time) * 1000
 
-
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
-
 
     def get_path_score(self, path):
         cost = -len(path) / 2  # -0.5 pts per length
@@ -877,30 +875,33 @@ class GridApp:
             stats_text += f"\nPruning Ratio: {pruning_ratio:.2f}"
 
         self.stats_label.config(text=stats_text)
+
     def visualize_belief(self, bg):
-        
+
         for r in range(self.grid_size):
             for c in range(self.grid_size):
                 # Skip walls/static items if you want, or just draw over them
-                if self.grid[r, c] == Cell.WALL: continue
-                
+                if self.grid[r, c] == Cell.WALL:
+                    continue
+
                 prob = bg.beliefs[r][c]
-                if prob is None: prob = bg.prior
-                
+                if prob is None:
+                    prob = bg.prior
+
                 # Draw a circle with opacity based on probability
-                # Since tkinter doesn't support alpha easily, we scale color 
+                # Since tkinter doesn't support alpha easily, we scale color
                 # from White (0%) to Red (100%)
-                intensity = int(255 * (1 - prob)) # 1.0 -> 0 (Dark), 0.0 -> 255 (Light)
-                color = f'#ff{intensity:02x}{intensity:02x}'
-                
+                intensity = int(255 * (1 - prob))  # 1.0 -> 0 (Dark), 0.0 -> 255 (Light)
+                color = f"#ff{intensity:02x}{intensity:02x}"
+
                 x1, y1 = c * self.cell_size, r * self.cell_size
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
-                
+
                 # Draw small indicator in corner
                 self.canvas.create_oval(
-                    x1+2, y1+2, x1+10, y1+10, 
-                    fill=color, outline=""
+                    x1 + 2, y1 + 2, x1 + 10, y1 + 10, fill=color, outline=""
                 )
         self.root.update()
+
     def run(self):
         self.root.mainloop()

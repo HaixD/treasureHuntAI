@@ -5,14 +5,16 @@ try:
     from constants import Cell
 except ModuleNotFoundError:
     from collections import namedtuple
-    Cell = namedtuple('Cell', ['TREASURE'])(TREASURE=2)
+
+    Cell = namedtuple("Cell", ["TREASURE"])(TREASURE=2)
+
 
 class BeliefGrid:
     def __init__(self, grid, false_positive, false_negative):
         self.grid = grid
         self.false_positive = false_positive
         self.false_negative = false_negative
-        
+
         self.popped = set()
 
         self.treasures = 0
@@ -50,7 +52,7 @@ class BeliefGrid:
                     self.beliefs[r][c] *= self_chance
                 else:
                     self.beliefs[r][c] *= other_chance
-                
+
                 total += self.beliefs[r][c]
 
         for r in range(h):
@@ -58,14 +60,18 @@ class BeliefGrid:
                 self.beliefs[r][c] /= total
 
     def pop(self, position=None, *, error=True):
-        output = (float('inf'), float('inf'), None) # (belief, distance, position)
+        output = (float("inf"), float("inf"), None)  # (belief, distance, position)
         for r, row in enumerate(self.beliefs):
             for c, belief in enumerate(row):
                 cell = (r, c)
                 if belief is None or cell in self.popped:
                     continue
 
-                distance = (abs(r - position[0]) + abs(c - position[1])) if position else float('inf')
+                distance = (
+                    (abs(r - position[0]) + abs(c - position[1]))
+                    if position
+                    else float("inf")
+                )
                 output = min(output, (-belief, distance, cell))
 
         cell = output[-1]
@@ -87,12 +93,26 @@ class BeliefGrid:
 
         return entropy
 
-if __name__ == '__main__':
-    grid = [[2, 2, ],
-            [0, 0, ]]
-    
+
+if __name__ == "__main__":
+    grid = [
+        [
+            2,
+            2,
+        ],
+        [
+            0,
+            0,
+        ],
+    ]
+
     belief_grid = BeliefGrid(grid, false_positive=0.1, false_negative=0.2)
     belief_grid.scan((0, 0))
     belief_grid.scan((0, 1))
-    print(*map(lambda row : list(map(lambda col : round(col, 3), row)), belief_grid.beliefs), sep='\n')
+    print(
+        *map(
+            lambda row: list(map(lambda col: round(col, 3), row)), belief_grid.beliefs
+        ),
+        sep="\n"
+    )
     print(belief_grid.get_entropy())
