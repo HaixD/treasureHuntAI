@@ -9,6 +9,7 @@ import copy
 import random
 import time
 import tkinter as tk
+from tkinter import ttk
 
 import numpy as np
 
@@ -116,9 +117,6 @@ class GridApp:
         # Initialize GUI
         self.root = tk.Tk()
         self.root.title("Treasure Hunt AI")
-
-        # Import ttk for native OS styling
-        from tkinter import ttk
 
         self.ttk = ttk
 
