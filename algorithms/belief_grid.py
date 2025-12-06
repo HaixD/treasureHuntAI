@@ -1,5 +1,4 @@
 from math import log
-from random import randint
 
 try:
     from constants import Cell
@@ -10,8 +9,9 @@ except ModuleNotFoundError:
 
 
 class BeliefGrid:
-    def __init__(self, grid, false_positive, false_negative):
+    def __init__(self, grid, random, false_positive, false_negative):
         self.grid = grid
+        self.random = random
         self.false_positive = false_positive
         self.false_negative = false_negative
 
@@ -32,12 +32,12 @@ class BeliefGrid:
         true_positive = 1 - self.false_negative
 
         if self.grid[r][c] == Cell.TREASURE:
-            if randint(1, 100) / 100 <= self.false_negative:
+            if self.random.randint(1, 100) / 100 <= self.false_negative:
                 self.update_posterior(position, self.false_negative, true_negative)
             else:
                 self.update_posterior(position, true_positive, self.false_positive)
         else:
-            if randint(1, 100) / 100 <= self.false_positive:
+            if self.random.randint(1, 100) / 100 <= self.false_positive:
                 self.update_posterior(position, self.false_positive, true_positive)
             else:
                 self.update_posterior(position, true_negative, self.false_negative)
@@ -95,16 +95,7 @@ class BeliefGrid:
 
 
 if __name__ == "__main__":
-    grid = [
-        [
-            2,
-            2,
-        ],
-        [
-            0,
-            0,
-        ],
-    ]
+    grid = [[2, 2], [0, 0]]
 
     belief_grid = BeliefGrid(grid, false_positive=0.1, false_negative=0.2)
     belief_grid.scan((0, 0))

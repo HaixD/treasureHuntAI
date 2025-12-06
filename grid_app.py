@@ -611,7 +611,7 @@ class GridApp:
 
         print(f"____________ Bayesian Search ({noise_level})__________________")
 
-        bg = BeliefGrid(self.grid, false_positive=fp, false_negative=fn)
+        bg = BeliefGrid(self.grid, self.rand, false_positive=fp, false_negative=fn)
         curr_pos = self.first_start_pos
         path_history = []
         scans = 0
