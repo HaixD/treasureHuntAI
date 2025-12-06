@@ -37,17 +37,23 @@ class GridApp:
 
         match set_prompt:
             case 1:
-                self.set_start = (0, 0)
-                self.set_treasures = [(19, 19)]
-                self.set_traps = [(5, 5), (10, 14), (14, 7)]
+                self.set_first_start = (0, 0)
+                self.set_second_start = (13, 13)
+                self.set_treasures = [(7, 7)]
+                self.set_traps = None
+                self.set_trap_range = 0
             case 2:
-                self.set_start = (10, 10)
-                self.set_treasures = [(3, 17), (17, 3)]
-                self.set_traps = [(3, 16), (4, 17), (16, 3), (17, 4)]
+                self.set_first_start = (2, 12)
+                self.set_second_start = (12, 2)
+                self.set_treasures = [(6, 5), (7, 10), (10, 8)]
+                self.set_traps = None
+                self.set_trap_range = 1
             case _:
-                self.set_start = None
+                self.set_first_start = None
+                self.set_second_start = None
                 self.set_treasures = None
                 self.set_traps = None
+                self.set_trap_range = 0
 
         # Inversely scale cell size based on grid size
         self.total_grid_pixels = 500
@@ -141,30 +147,30 @@ class GridApp:
         ).grid(row=2, column=1, padx=5, pady=3)
         tk.Button(
             button_frame,
-            text="Minimax (Pruning)",
+            text="Alpha-Beta",
             command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
-        #button for Bayesian
+        # button for Bayesian
         tk.Button(
-            button_frame, 
-            text="Bayes (Low Noise)", 
-            command=lambda: self.run_bayesian_agent("Low")
+            button_frame,
+            text="Bayes (Low Noise)",
+            command=lambda: self.run_bayesian_agent("Low"),
         ).grid(row=3, column=1, padx=5, pady=3)
         tk.Button(
-            button_frame, 
-            text="Bayes (Med Noise)", 
-            command=lambda: self.run_bayesian_agent("Med")
+            button_frame,
+            text="Bayes (Med Noise)",
+            command=lambda: self.run_bayesian_agent("Med"),
         ).grid(row=3, column=1, padx=5, pady=3)
         tk.Button(
-            button_frame, 
-            text="Bayes (High Noise)", 
-            command=lambda: self.run_bayesian_agent("High")
+            button_frame,
+            text="Bayes (High Noise)",
+            command=lambda: self.run_bayesian_agent("High"),
         ).grid(row=3, column=1, padx=5, pady=3)
         # Frame for Minimax depth slider
         depth_frame = tk.Frame(self.root)
         depth_frame.pack(pady=(0, 10))
 
-        tk.Label(depth_frame, text="Minimax Depth:", font=("Arial", 11)).pack(
+        tk.Label(depth_frame, text="Depth:", font=("Arial", 11)).pack(
             side=tk.LEFT, padx=5
         )
 
@@ -176,7 +182,7 @@ class GridApp:
         self.depth_slider = ttk.Scale(
             depth_frame,
             from_=2,
-            to=4,
+            to=5,
             orient=tk.HORIZONTAL,
             command=self.update_depth,
         )
@@ -277,16 +283,29 @@ class GridApp:
                 cur_trap_pos = self.set_traps[trap_count]
                 trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
             else:
-                trap_pos = (
-                    self.rand.randrange(
-                        max(treasure_pos[0] - 2, 0),
-                        min(treasure_pos[0] + 2, self.grid_size),
-                    ),
-                    self.rand.randrange(
-                        max(treasure_pos[1] - 2, 0),
-                        min(treasure_pos[1] + 2, self.grid_size),
-                    ),
-                )
+                random_treasure_pos = random.choice(self.treasure_pos)
+                if self.set_trap_range > 0:
+                    trap_pos = (
+                        self.rand.randrange(
+                            max(random_treasure_pos[0] - self.set_trap_range, 0),
+                            min(
+                                random_treasure_pos[0] + self.set_trap_range,
+                                self.grid_size,
+                            ),
+                        ),
+                        self.rand.randrange(
+                            max(random_treasure_pos[1] - self.set_trap_range, 0),
+                            min(
+                                random_treasure_pos[1] + self.set_trap_range,
+                                self.grid_size,
+                            ),
+                        ),
+                    )
+                else:
+                    trap_pos = (
+                        self.rand.randrange(self.grid_size),
+                        self.rand.randrange(self.grid_size),
+                    )
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
                 trap_count += 1
@@ -302,18 +321,18 @@ class GridApp:
                 wall_count += 1
 
         # Place start
-        if isinstance(self.set_start, tuple):
-            start_pos = (self.set_start[0], self.set_start[1])
+        if self.set_first_start is not None and isinstance(self.set_first_start, tuple):
+            first_start_pos = self.set_first_start
         else:
             while True:
-                start_pos = (
+                first_start_pos = (
                     self.rand.randrange(self.grid_size),
                     self.rand.randrange(self.grid_size),
                 )
-                if start_pos not in [Cell.TREASURE, Cell.TRAP]:
+                if first_start_pos not in [Cell.TREASURE, Cell.TRAP]:
                     break
-        grid[start_pos] = Cell.START
-        self.first_start_pos = start_pos
+        grid[first_start_pos] = Cell.START
+        self.first_start_pos = first_start_pos
 
         return grid
 
@@ -428,16 +447,21 @@ class GridApp:
 
         self.clear_path()
 
-        while True:
-            if self.second_start_pos is not None and self.second_start_pos not in [
-                Cell.TREASURE,
-                Cell.TRAP,
-            ]:
-                break
-            self.second_start_pos = (
-                self.rand.randrange(self.grid_size),
-                self.rand.randrange(self.grid_size),
-            )
+        if self.set_second_start is not None and isinstance(
+            self.set_second_start, tuple
+        ):
+            self.second_start_pos = self.set_second_start
+        else:
+            while True:
+                if self.second_start_pos is not None and self.second_start_pos not in [
+                    Cell.TREASURE,
+                    Cell.TRAP,
+                ]:
+                    break
+                self.second_start_pos = (
+                    self.rand.randrange(self.grid_size),
+                    self.rand.randrange(self.grid_size),
+                )
 
         self.grid[self.first_start_pos] = Cell.START_FIRST
         self.grid[self.second_start_pos] = Cell.START_SECOND
@@ -569,12 +593,13 @@ class GridApp:
                 algorithm,
                 path_costs=path_costs,
             )
+
     def run_bayesian_agent(self, noise_level="Low"):
         if self.is_animating:
             return
 
         self.clear_path()
-        
+
         if noise_level == "Low":
             fp, fn = 0.05, 0.05
         elif noise_level == "Medium":
@@ -585,60 +610,57 @@ class GridApp:
             fp, fn = 0.1, 0.1
 
         print(f"____________ Bayesian Search ({noise_level})__________________")
-        
+
         bg = BeliefGrid(self.grid, false_positive=fp, false_negative=fn)
         curr_pos = self.first_start_pos
-        path_history = [] 
+        path_history = []
         scans = 0
-        
+
         start_time = time.time()
         max_steps = self.grid_size * self.grid_size * 2
-        
+
         while bg.treasures > 0 and len(path_history) < max_steps:
 
             bg.scan(curr_pos)
             scans += 1
-            
+
             try:
                 target = bg.pop(position=curr_pos, error=False)
             except (IndexError, TypeError):
                 print("Bayesian Agent: No more targets found.")
                 break
-                
+
             if target is None:
                 break
 
-            path_result = a_star(
-                self.grid, 
-                curr_pos, 
-                target, 
-                manhattan_distance
-            )
-            
-            path_segment = path_result[0] 
-            
+            path_result = a_star(self.grid, curr_pos, target, manhattan_distance)
+
+            path_segment = path_result[0]
+
             if path_segment is None:
                 continue
 
-            if len(path_segment) > 0 and isinstance(path_segment[0], tuple) and len(path_segment[0]) == 2:
-                 # Unzip: separate costs and positions
-                 _, positions = zip(*path_segment)
+            if (
+                len(path_segment) > 0
+                and isinstance(path_segment[0], tuple)
+                and len(path_segment[0]) == 2
+            ):
+                # Unzip: separate costs and positions
+                _, positions = zip(*path_segment)
             else:
-                 positions = path_segment
+                positions = path_segment
 
             if len(path_history) > 0:
-                path_history.extend(positions[1:]) # Skip start node if continuing
+                path_history.extend(positions[1:])  # Skip start node if continuing
             else:
                 path_history.extend(positions)
-                
-            curr_pos = target 
+
+            curr_pos = target
 
         end_time = time.time()
         execution_time = (end_time - start_time) * 1000
 
-
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
-
 
     def get_path_score(self, path):
         cost = -len(path) / 2  # -0.5 pts per length
@@ -877,30 +899,33 @@ class GridApp:
             stats_text += f"\nPruning Ratio: {pruning_ratio:.2f}"
 
         self.stats_label.config(text=stats_text)
+
     def visualize_belief(self, bg):
-        
+
         for r in range(self.grid_size):
             for c in range(self.grid_size):
                 # Skip walls/static items if you want, or just draw over them
-                if self.grid[r, c] == Cell.WALL: continue
-                
+                if self.grid[r, c] == Cell.WALL:
+                    continue
+
                 prob = bg.beliefs[r][c]
-                if prob is None: prob = bg.prior
-                
+                if prob is None:
+                    prob = bg.prior
+
                 # Draw a circle with opacity based on probability
-                # Since tkinter doesn't support alpha easily, we scale color 
+                # Since tkinter doesn't support alpha easily, we scale color
                 # from White (0%) to Red (100%)
-                intensity = int(255 * (1 - prob)) # 1.0 -> 0 (Dark), 0.0 -> 255 (Light)
-                color = f'#ff{intensity:02x}{intensity:02x}'
-                
+                intensity = int(255 * (1 - prob))  # 1.0 -> 0 (Dark), 0.0 -> 255 (Light)
+                color = f"#ff{intensity:02x}{intensity:02x}"
+
                 x1, y1 = c * self.cell_size, r * self.cell_size
                 x2, y2 = x1 + self.cell_size, y1 + self.cell_size
-                
+
                 # Draw small indicator in corner
                 self.canvas.create_oval(
-                    x1+2, y1+2, x1+10, y1+10, 
-                    fill=color, outline=""
+                    x1 + 2, y1 + 2, x1 + 10, y1 + 10, fill=color, outline=""
                 )
         self.root.update()
+
     def run(self):
         self.root.mainloop()
