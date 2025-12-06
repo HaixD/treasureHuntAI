@@ -2,29 +2,26 @@
 1. install NumPy if you don't have it already
 2. run main.py
     - this will launch the GUI window where you can interact with the grid and run the search algorithms.
-3. select the option "Bayes()
-# Utility Value Formula
-There are 2 components which make up the utility value
-- a treasure difference (number of teasures owned by MAX - number of treasured owned by MIN)
-- the distance between MAX and its closest treasure (based on A*), and the distance between MIN and its closest treasure (also based on A*).
-    - Because we want to penalize large distances and encourage shorter distances, we subtract the diagonal length of the grid by the A* distance (this assumes the diagonal length is the longest a path could be)
-    - We take the adjusted distance of MAX and subtract it by MIN's adjusted distance
-- when there are no treasures left the utility value will be either `float('inf')`, `-float('inf')`, or 0 depending who has more treasures
-# Comparison
-|Algorithm      |depth|Nodes Expanded|Execution Time (ms)|Winner |
-|---------------|-----|--------------|-------------------|-------|
-|Minimax        |2    |3595          |325                |MAX(A) |
-|Alpha-Beta     |2    |3593          |324                |MAX(A) |
-|Minimax        |3    |31181         |2154               |TIE    |
-|Alpha-Beta     |3    |20726         |1433               |TIE    |
-|Minimax        |4    |40427         |4581               |MAX(A) |
-|Alpha-Beta     |4    |16638         |2402               |MAX(A) |
+3. select 1 of the following options: Bayes(High Noise), Bayes (Medium Noise), or Bayes(Low Noise)
 
-Here, we observed that alpha-beta runs noitceably faster while achieving the same end result. It also results in less nodes expanded. Another big factor for run time and number of nodes expanded is depth. In our testing, we found that high nodes (e.g. 10) are impractical because it takes too long.
+# Sensor Model Description and Bayesian Update
+When we scan a cell, there will be a chance that we "intentionally" flip our result to simulate a false positive or false negative. Based on the type of scan result, we update all beliefs differently.
+- if the scan result is a **false negative**: the belief for the scanned cell is multiplied by the *false negative chance* and all other cells are multiplied by the *true negative chance*
+- if the scan result is a **true positive**: the belief for the scanned cell is multiplied by the *true positive chance* and all other cells are multiplied by the *false positive chance*
+- if the scan result is a **false positive**: the belief for the scanned cell is multiplied by the *false positive chance* and all other cells are multiplied by the *true positive chance*
+- if the scan result is a **true negative**: the belief for the scanned cell is multiplied by the *true negative chance* and all other cells are multiplied by the *false engative chance*
 
-In regards to the evaluation function, we saw that individually they weren't ideal but combining them yielded better results.
+After applying the multiplications, all beliefs are normalized (by summing them up and dividing each of them by the total).
 
-# Screenshot
-![Screenshot](./gui_screenshot.png)
-# Generative AI Statement
-No AI was used for Assignment 3.
+# Belief Implementation
+Beliefs are stored in a 2D list where each value is initialized to number of treasures / total number of cells. This list is updated whenever we scan.
+
+# Decision Policy
+WRITE DECISION POLICY HERE PLS
+
+# Experiments and Results
+|Seed      |Noise Level|Average Steps|Average Scans|Average Entropy at Detection|Detection Accuracy|
+|----------|-----------|-------------|-------------|----------------------------|------------------|
+|          |Low        |             |             |                            |                  |
+|          |Medium     |             |             |                            |                  |
+|          |High       |             |             |                            |                  |
