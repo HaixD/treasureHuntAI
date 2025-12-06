@@ -773,6 +773,7 @@ class GridApp:
     def clear_path(self):
         """Clear all path markings from the grid and reset to initial state."""
         grid = self.grid
+        grid[grid == Cell.START_SECOND] = Cell.EMPTY
         grid[grid == Cell.PATH] = Cell.EMPTY
         grid[grid == Cell.PATH_FIRST] = Cell.EMPTY
         grid[grid == Cell.PATH_SECOND] = Cell.EMPTY
