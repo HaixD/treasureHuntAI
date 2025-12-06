@@ -22,6 +22,6 @@ WRITE DECISION POLICY HERE PLS
 # Experiments and Results
 |Noise Level|Average Steps|Average Scans|Average Entropy at Detection|Detection Accuracy|
 |-----------|-------------|-------------|----------------------------|------------------|
-|Low        |             |             |                            |100%              |
+|Low        |414.3        |501.2        |3.9159                      |100%              |
 |Medium     |396.5        |338.1        |4.2687                      |100%              |
 |High       |410.9        |509.6        |5.55823                     |100%              |
