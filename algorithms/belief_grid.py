@@ -22,7 +22,7 @@ class BeliefGrid:
             for col in row:
                 if col == Cell.TREASURE:
                     self.treasures += 1
-        self.prior = self.treasures / (len(self.grid) * len(self.grid[0]))
+        self.prior = 1.0 / (len(self.grid) * len(self.grid[0]))
 
         self.beliefs = [[self.prior] * len(grid[0]) for _ in range(len(grid))]
 

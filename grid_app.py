@@ -20,7 +20,7 @@ from utils import (
 class GridApp:
     def __init__(
         self,
-        grid_size=20,
+        grid_size=10,
         treasure_total=2,
         trap_total=4,
         wall_total=15,
@@ -160,12 +160,12 @@ class GridApp:
             button_frame,
             text="Bayes (Med Noise)",
             command=lambda: self.run_bayesian_agent("Med"),
-        ).grid(row=3, column=1, padx=5, pady=3)
+        ).grid(row=3, column=2, padx=5, pady=3)
         tk.Button(
             button_frame,
             text="Bayes (High Noise)",
             command=lambda: self.run_bayesian_agent("High"),
-        ).grid(row=3, column=1, padx=5, pady=3)
+        ).grid(row=3, column=3, padx=5, pady=3)
         # Frame for Minimax depth slider
         depth_frame = tk.Frame(self.root)
         depth_frame.pack(pady=(0, 10))
@@ -599,69 +599,133 @@ class GridApp:
             return
 
         self.clear_path()
+        if noise_level == "Low": fp, fn = 0.05, 0.05
+        elif noise_level == "Medium": fp, fn = 0.1, 0.2
+        elif noise_level == "High": fp, fn = 0.2, 0.3
+        else: fp, fn = 0.1, 0.1
 
-        if noise_level == "Low":
-            fp, fn = 0.05, 0.05
-        elif noise_level == "Medium":
-            fp, fn = 0.1, 0.2
-        elif noise_level == "High":
-            fp, fn = 0.2, 0.3
-        else:
-            fp, fn = 0.1, 0.1
+        print(f"\n{'='*20} Starting Bayesian Search ({noise_level}) {'='*20}")
 
-        print(f"____________ Bayesian Search ({noise_level})__________________")
+
+        def print_belief_grid(bg_obj, title):
+            print(f"\n--- {title} ---")
+            header = "      " + " ".join([f"{c:^5}" for c in range(self.grid_size)])
+            print(header)
+            
+            for r in range(self.grid_size):
+                row_str = f"{r:^4} |"
+                for c in range(self.grid_size):
+                    val = bg_obj.beliefs[r][c]
+                    if val is None: val = bg_obj.prior
+                    
+                    # Visual formatting:
+                    # [ ] for High Probability (> 50%)
+                    #  * for Zero (Found/Impossible)
+                    if val > 0.5:
+                        row_str += f"[{val:.2f}]"
+                    elif val == 0.0:
+                        row_str += "  * " 
+                    elif val < 0.001:
+                         row_str += " ... " 
+                    else:
+                        row_str += f" {val:.3f} "
+                print(row_str)
+            print("-" * len(header))
+
+
+        def handle_found_treasure(bg_obj, r, c):
+            #Zero out the found cell
+            bg_obj.beliefs[r][c] = 0.0
+            
+            total_prob = sum(sum(row) for row in bg_obj.beliefs)
+            
+            if total_prob > 0:
+                for row_idx in range(self.grid_size):
+                    for col_idx in range(self.grid_size):
+                        bg_obj.beliefs[row_idx][col_idx] /= total_prob
+            
+            #Clear the 'popped' history so the agent can re-evaluate 
+            # nearby cells for the SECOND treasure.
+            bg_obj.popped.clear()
+
 
         bg = BeliefGrid(self.grid, false_positive=fp, false_negative=fn)
+        
         curr_pos = self.first_start_pos
-        path_history = []
+        path_history = [] 
         scans = 0
+        
+        
+        treasures_found = 0
+        total_treasures = self.treasure_total
+        
+        print_belief_grid(bg, f"Belief Map at t=0 (Uniform Prior)")
 
         start_time = time.time()
-        max_steps = self.grid_size * self.grid_size * 2
+        max_steps = self.grid_size * self.grid_size * 3
+        
 
-        while bg.treasures > 0 and len(path_history) < max_steps:
+        while treasures_found < total_treasures and len(path_history) < max_steps:
+            
+            
+            if (self.grid[curr_pos] == Cell.TREASURE or self.grid[curr_pos] == Cell.TREASURE_COLLECTED) \
+               and bg.beliefs[curr_pos[0]][curr_pos[1]] > 0.0:
+                
+                treasures_found += 1
+                print_belief_grid(bg, f"Belief Map at Detection #{treasures_found} (Location: {curr_pos})")
+                handle_found_treasure(bg, curr_pos[0], curr_pos[1])
+                
+                if treasures_found == total_treasures:
+                    print("All treasures found!")
+                    break
 
             bg.scan(curr_pos)
             scans += 1
+
+            if scans == 10:
+                print_belief_grid(bg, f"Belief Map after 10 scans")
 
             try:
                 target = bg.pop(position=curr_pos, error=False)
             except (IndexError, TypeError):
                 print("Bayesian Agent: No more targets found.")
                 break
+                
+            if target is None: break
 
-            if target is None:
-                break
 
             path_result = a_star(self.grid, curr_pos, target, manhattan_distance)
-
             path_segment = path_result[0]
 
             if path_segment is None:
+                bg.beliefs[target[0]][target[1]] = 0.0 
                 continue
 
-            if (
-                len(path_segment) > 0
-                and isinstance(path_segment[0], tuple)
-                and len(path_segment[0]) == 2
-            ):
-                # Unzip: separate costs and positions
-                _, positions = zip(*path_segment)
+            if len(path_segment) > 0 and isinstance(path_segment[0], tuple) and len(path_segment[0]) == 2:
+                 _, positions = zip(*path_segment)
             else:
-                positions = path_segment
+                 positions = path_segment
 
             if len(path_history) > 0:
-                path_history.extend(positions[1:])  # Skip start node if continuing
+                path_history.extend(positions[1:])
             else:
                 path_history.extend(positions)
-
-            curr_pos = target
+                
+            curr_pos = target 
 
         end_time = time.time()
         execution_time = (end_time - start_time) * 1000
+        final_entropy = bg.get_entropy()
+        
+        print(f"\nResults for {noise_level} Noise:")
+        print(f"  - Scans: {scans}")
+        print(f"  - Moves: {len(path_history)}")
+        print(f"  - Final Entropy: {final_entropy:.4f}")
+ 
 
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
-
+        
+        
     def get_path_score(self, path):
         cost = -len(path) / 2  # -0.5 pts per length
 
