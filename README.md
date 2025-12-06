@@ -17,7 +17,7 @@ After applying the multiplications, all beliefs are normalized (by summing them 
 Beliefs are stored in a 2D list where each value is initialized to number of treasures / total number of cells. This list is updated whenever we scan.
 
 # Decision Policy
-WRITE DECISION POLICY HERE PLS
+The agent uses Bayesian inference to continuously update a probability map based on noisy sensor readings, guiding its movement toward the highest likelihood cells to sequentially locate and zero out treasures.
 
 # Grid Configuration
 grid_size=20
