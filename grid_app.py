@@ -112,7 +112,7 @@ class GridApp:
         run_label = tk.Label(button_frame, text="Run:", font=("Arial", 11))
         run_label.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
 
-        # Top row: non-heuristics algorithms
+        # Row 1: non-heuristics algorithms
         tk.Button(
             button_frame, text="BFS", command=lambda: self.run_search_algorithm("BFS")
         ).grid(row=0, column=1, padx=5, pady=3)
@@ -123,7 +123,7 @@ class GridApp:
             button_frame, text="UCS", command=lambda: self.run_search_algorithm("UCS")
         ).grid(row=0, column=3, padx=5, pady=3)
 
-        # Bottom row: heuristic-based algorithms
+        # Row 2: heuristic-based algorithms
         tk.Button(
             button_frame,
             text="Greedy",
@@ -140,6 +140,7 @@ class GridApp:
             command=lambda: self.run_search_algorithm("A* (Euclidean)"),
         ).grid(row=1, column=3, padx=5, pady=3)
 
+        # Row 3: adversarial algorithms
         tk.Button(
             button_frame,
             text="Minimax",
@@ -150,7 +151,8 @@ class GridApp:
             text="Alpha-Beta",
             command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
-        # button for Bayesian
+
+        # Row 4: Bayesian algorithms
         tk.Button(
             button_frame,
             text="Bayes (Low Noise)",
@@ -166,6 +168,7 @@ class GridApp:
             text="Bayes (High Noise)",
             command=lambda: self.run_bayesian_agent("High"),
         ).grid(row=3, column=1, padx=5, pady=3)
+
         # Frame for Minimax depth slider
         depth_frame = tk.Frame(self.root)
         depth_frame.pack(pady=(0, 10))
