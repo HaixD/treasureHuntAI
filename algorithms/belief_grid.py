@@ -13,8 +13,6 @@ class BeliefGrid:
         self.false_positive = false_positive
         self.false_negative = false_negative
         
-        self.observations = [[[] for _ in range(len(grid[0]))] for _ in range(len(grid))]
-        self.overrides = [[None] * len(grid[0]) for _ in range(len(grid))]
         self.popped = set()
 
         self.treasures = 0
@@ -33,17 +31,13 @@ class BeliefGrid:
 
         if self.grid[r][c] == Cell.TREASURE:
             if randint(1, 100) / 100 <= self.false_negative:
-                self.observations[r][c].append(0)
                 self.update_posterior(position, self.false_negative, true_negative)
             else:
-                self.observations[r][c].append(1)
                 self.update_posterior(position, true_positive, self.false_positive)
         else:
             if randint(1, 100) / 100 <= self.false_positive:
-                self.observations[r][c].append(1)
                 self.update_posterior(position, self.false_positive, true_positive)
             else:
-                self.observations[r][c].append(0)
                 self.update_posterior(position, true_negative, self.false_negative)
 
     def update_posterior(self, position, self_chance, other_chance):
@@ -87,12 +81,8 @@ class BeliefGrid:
     def get_entropy(self):
         entropy = 0
 
-        for r, row in enumerate(self.beliefs):
-            for c, belief in enumerate(row):
-                if self.overrides[r][c] is not None:
-                    belief = self.overrides[r][c]
-                elif belief is None:
-                    belief = self.prior
+        for row in self.beliefs:
+            for belief in row:
                 entropy += -belief * log(belief + 1e-12)
 
         return entropy
