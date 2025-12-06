@@ -1,9 +1,32 @@
+"""Uniform Cost Search algorithm implementation for grid pathfinding.
+
+This module provides a UCS implementation that finds the lowest-cost path from a start position to a
+goal on a grid, accounting for different movement costs.
+"""
+
 import heapq
 from utils import get_neighbors
 from constants import Cell
 
 
 def ucs(grid, start, goal):
+    """Find the lowest-cost path to the goal using Uniform Cost Search.
+
+    UCS explores nodes in order of their path cost from the start, guaranteeing the optimal
+    (lowest-cost) path. Movement through traps incurs an additional cost penalty of 4, while regular
+    moves cost 1.
+
+    Args:
+        grid (np.ndarray): 2D grid array containing cell types (treasures, walls, traps, etc.).
+        start (tuple): Starting position as (row, col).
+        goal (tuple): Goal position as (row, col).
+
+    Returns:
+        tuple: A tuple containing:
+            - path (list or None): List of (row, col) positions from start to goal,
+                or None if no path exists.
+            - cells_expanded (int): Number of cells explored during the search.
+    """
     pq = [(0, start)]  # Priority queue: (cost, position)
     visited = set()  # Record all fully explored cells so far
     parent = {start: None}  # Record best parents of each cell for path reconstruction

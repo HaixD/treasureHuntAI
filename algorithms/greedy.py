@@ -1,9 +1,35 @@
+"""Greedy Best-First Search algorithm implementation for grid pathfinding.
+
+This module provides a Greedy search implementation that finds a path by always moving toward the
+goal based on a heuristic estimate, without considering path cost.
+"""
+
 import heapq
 from utils import get_neighbors
 from constants import Cell
 
 
 def greedy(grid, start, goal, heuristic_func):
+    """Find a path to the goal using Greedy Best-First Search.
+
+    Greedy search expands nodes based solely on their heuristic estimate to the goal, always
+    choosing the node that appears closest. This approach is fast but does not guarantee an optimal
+    path. Movement through traps incurs an additional cost penalty of 4, while regular moves cost 1.
+
+    Args:
+        grid (np.ndarray): 2D grid array containing cell types (treasures, walls, traps, etc.).
+        start (tuple): Starting position as (row, col).
+        goal (tuple): Goal position as (row, col).
+        heuristic_func (callable): Function that estimates distance to goal.
+            Takes two positions (current, goal) and returns a numeric estimate.
+            Common choices: manhattan_distance, euclidean_distance.
+
+    Returns:
+        tuple: A tuple containing:
+            - path (list or None): List of (heuristic_cost, (row, col)) tuples from
+                start to goal, or None if no path exists.
+            - cells_expanded (int): Number of cells explored during the search.
+    """
     pq = [(0, start)]  # Priority queue: (cost, position)
     visited = set()  # Record all fully explored cells so far
     parent = {start: None}  # Record best parents of each cell for path reconstruction
