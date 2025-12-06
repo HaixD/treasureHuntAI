@@ -596,8 +596,7 @@ class GridApp:
         
         while bg.treasures > 0 and len(path_history) < max_steps:
 
-            bg.override_belief(curr_pos)
-            bg.scan_neighbors(curr_pos)
+            bg.scan(curr_pos)
             scans += 1
             
             try:
@@ -619,7 +618,6 @@ class GridApp:
             path_segment = path_result[0] 
             
             if path_segment is None:
-                bg.override_belief(target, pop=True)
                 continue
 
             if len(path_segment) > 0 and isinstance(path_segment[0], tuple) and len(path_segment[0]) == 2:

@@ -1,8 +1,11 @@
 from math import log
 from random import randint
-from enum import IntEnum
-from constants import Cell
 
+try:
+    from constants import Cell
+except ModuleNotFoundError:
+    from collections import namedtuple
+    Cell = namedtuple('Cell', ['TREASURE'])(TREASURE=2)
 
 class BeliefGrid:
     def __init__(self, grid, false_positive, false_negative):
@@ -11,7 +14,6 @@ class BeliefGrid:
         self.false_negative = false_negative
         
         self.observations = [[[] for _ in range(len(grid[0]))] for _ in range(len(grid))]
-        self.beliefs = [[None] * len(grid[0]) for _ in range(len(grid))]
         self.overrides = [[None] * len(grid[0]) for _ in range(len(grid))]
         self.popped = set()
 
@@ -20,82 +22,46 @@ class BeliefGrid:
             for col in row:
                 if col == Cell.TREASURE:
                     self.treasures += 1
-        self.decrement_treasure()
-
-    def override_belief(self, position, *, pop=True):
-        r, c = position
-        is_treasure = self.grid[r][c] == Cell.TREASURE
-        
-        self.overrides[r][c] = int(is_treasure)
-        self.beliefs[r][c] = self.overrides[r][c]
-
-        if is_treasure:
-            self.decrement_treasure()
-
-        if pop:
-            self.popped.add(position)
-
-    def decrement_treasure(self):
-        self.treasures -= 1
         self.prior = self.treasures / (len(self.grid) * len(self.grid[0]))
 
-        for r, row in enumerate(self.beliefs):
-            for c, col in enumerate(row):
-                if col is not None:
-                    self.update_posterior((r, c))
-
-    def scan_neighbors(self, position):
-        r, c = position
-        h, w = len(self.grid), len(self.grid[0])
-       
-        def try_scan(r, c):
-            if 0 <= r < h and 0 <= c < w:
-                self.scan((r, c))
-
-        try_scan(r - 1, c)
-        try_scan(r + 1, c)
-        try_scan(r, c - 1)
-        try_scan(r, c + 1)
-        # need to scan own cell bru
-        try_scan(r,c)
+        self.beliefs = [[self.prior] * len(grid[0]) for _ in range(len(grid))]
 
     def scan(self, position):
         r, c = position
+        true_negative = 1 - self.false_positive
+        true_positive = 1 - self.false_negative
+
         if self.grid[r][c] == Cell.TREASURE:
             if randint(1, 100) / 100 <= self.false_negative:
                 self.observations[r][c].append(0)
+                self.update_posterior(position, self.false_negative, true_negative)
             else:
                 self.observations[r][c].append(1)
+                self.update_posterior(position, true_positive, self.false_positive)
         else:
             if randint(1, 100) / 100 <= self.false_positive:
                 self.observations[r][c].append(1)
+                self.update_posterior(position, self.false_positive, true_positive)
             else:
                 self.observations[r][c].append(0)
+                self.update_posterior(position, true_negative, self.false_negative)
 
-        self.update_posterior(position)
+    def update_posterior(self, position, self_chance, other_chance):
+        h, w = len(self.grid), len(self.grid[0])
 
-    def update_posterior(self, position):
-        r, c = position
-        if self.overrides[r][c] is not None:
-            return
-        
-        true_positive = 1 - self.false_positive
-        true_negative = 1 - self.false_negative
+        total = 0
+        for r in range(h):
+            for c in range(w):
+                if (r, c) == position:
+                    self.beliefs[r][c] *= self_chance
+                else:
+                    self.beliefs[r][c] *= other_chance
+                
+                total += self.beliefs[r][c]
 
-        T_likelihood = 1
-        not_T_likelihood = 1
-        for observation in self.observations[r][c]:
-            if observation:
-                T_likelihood *= true_positive
-                not_T_likelihood *= self.false_positive
-            else:
-                T_likelihood *= self.false_negative
-                not_T_likelihood *= true_negative
-
-        T_posterior = self.prior * T_likelihood
-        not_T_posterior = (1 - self.prior)  * not_T_likelihood
-
-        self.beliefs[r][c] = T_posterior / (T_posterior + not_T_posterior)
+        for r in range(h):
+            for c in range(w):
+                self.beliefs[r][c] /= total
 
     def pop(self, position=None, *, error=True):
         output = (float('inf'), float('inf'), None) # (belief, distance, position)
@@ -132,37 +98,9 @@ class BeliefGrid:
         return entropy
 
 if __name__ == '__main__':
-    grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 2, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    grid = [[2, 2, ],
+            [0, 0, ]]
     
-    belief_grid = BeliefGrid(grid, false_negative=0.2, false_positive=0.3)
-
-    # walk along horizontal path and scan all neighbors
-    for i in range(len(grid[0])):
-        player_pos = (2, i)
-        belief_grid.override_belief(player_pos) # we know exactly what the cell we stand on contains
-        if grid[2][i] == Cell.TREASURE:
-            pass # treasure found
-        belief_grid.scan_neighbors(player_pos)  # we kind of know what the neighboring cells contain
-
-    # find best cell to walk towards
-    goal = belief_grid.pop(position=player_pos) # now you can walk towards goal like you did before
-
-    # assume we keep teleporting to the goal
-    player_pos = goal
-    while grid[player_pos[0]][player_pos[1]] != Cell.TREASURE:
-        player_pos = belief_grid.pop(player_pos) # pop will also return unscanned cells
-    belief_grid.decrement_treasure() # here, the player teleports to goal but never overrides the cell it stood on, we must call decrement manually
-
-    # scanning and overriding will decrease entropy because we learn more (overriding is more impactful)
-    initial_entropy = belief_grid.get_entropy() # entropy with 1 treasure left
-    belief_grid.override_belief((5, 7)) # treasure is automatically decremented
-    final_entropy = belief_grid.get_entropy() # entropy with no treasures left
-
-    assert(initial_entropy > final_entropy) # no error because we found out more information about the grid after overriding
-    assert(round(final_entropy, 4) == -0) # no error because we found 2/2 treasures and we know the rest of the cells aren't treasures
+    belief_grid = BeliefGrid(grid, false_positive=0.1, false_negative=0.2)
+    belief_grid.scan((0, 0))
+    print(*map(lambda row : list(map(lambda col : round(col, 3), row)), belief_grid.beliefs), sep='\n')
