@@ -37,17 +37,23 @@ class GridApp:
 
         match set_prompt:
             case 1:
-                self.set_start = (0, 0)
-                self.set_treasures = [(19, 19)]
-                self.set_traps = [(5, 5), (10, 14), (14, 7)]
+                self.set_first_start = (0, 0)
+                self.set_second_start = (13, 13)
+                self.set_treasures = [(7, 7)]
+                self.set_traps = None
+                self.set_trap_range = 0
             case 2:
-                self.set_start = (10, 10)
-                self.set_treasures = [(3, 17), (17, 3)]
-                self.set_traps = [(3, 16), (4, 17), (16, 3), (17, 4)]
+                self.set_first_start = (2, 12)
+                self.set_second_start = (12, 2)
+                self.set_treasures = [(6, 5), (7, 10), (10, 8)]
+                self.set_traps = None
+                self.set_trap_range = 1
             case _:
-                self.set_start = None
+                self.set_first_start = None
+                self.set_second_start = None
                 self.set_treasures = None
                 self.set_traps = None
+                self.set_trap_range = 0
 
         # Inversely scale cell size based on grid size
         self.total_grid_pixels = 500
@@ -141,7 +147,7 @@ class GridApp:
         ).grid(row=2, column=1, padx=5, pady=3)
         tk.Button(
             button_frame,
-            text="Minimax (Pruning)",
+            text="Alpha-Beta",
             command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
         # button for Bayesian
@@ -164,7 +170,7 @@ class GridApp:
         depth_frame = tk.Frame(self.root)
         depth_frame.pack(pady=(0, 10))
 
-        tk.Label(depth_frame, text="Minimax Depth:", font=("Arial", 11)).pack(
+        tk.Label(depth_frame, text="Depth:", font=("Arial", 11)).pack(
             side=tk.LEFT, padx=5
         )
 
@@ -176,7 +182,7 @@ class GridApp:
         self.depth_slider = ttk.Scale(
             depth_frame,
             from_=2,
-            to=4,
+            to=5,
             orient=tk.HORIZONTAL,
             command=self.update_depth,
         )
@@ -277,16 +283,29 @@ class GridApp:
                 cur_trap_pos = self.set_traps[trap_count]
                 trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
             else:
-                trap_pos = (
-                    self.rand.randrange(
-                        max(treasure_pos[0] - 2, 0),
-                        min(treasure_pos[0] + 2, self.grid_size),
-                    ),
-                    self.rand.randrange(
-                        max(treasure_pos[1] - 2, 0),
-                        min(treasure_pos[1] + 2, self.grid_size),
-                    ),
-                )
+                random_treasure_pos = random.choice(self.treasure_pos)
+                if self.set_trap_range > 0:
+                    trap_pos = (
+                        self.rand.randrange(
+                            max(random_treasure_pos[0] - self.set_trap_range, 0),
+                            min(
+                                random_treasure_pos[0] + self.set_trap_range,
+                                self.grid_size,
+                            ),
+                        ),
+                        self.rand.randrange(
+                            max(random_treasure_pos[1] - self.set_trap_range, 0),
+                            min(
+                                random_treasure_pos[1] + self.set_trap_range,
+                                self.grid_size,
+                            ),
+                        ),
+                    )
+                else:
+                    trap_pos = (
+                        self.rand.randrange(self.grid_size),
+                        self.rand.randrange(self.grid_size),
+                    )
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
                 trap_count += 1
@@ -302,18 +321,18 @@ class GridApp:
                 wall_count += 1
 
         # Place start
-        if isinstance(self.set_start, tuple):
-            start_pos = (self.set_start[0], self.set_start[1])
+        if self.set_first_start is not None and isinstance(self.set_first_start, tuple):
+            first_start_pos = self.set_first_start
         else:
             while True:
-                start_pos = (
+                first_start_pos = (
                     self.rand.randrange(self.grid_size),
                     self.rand.randrange(self.grid_size),
                 )
-                if start_pos not in [Cell.TREASURE, Cell.TRAP]:
+                if first_start_pos not in [Cell.TREASURE, Cell.TRAP]:
                     break
-        grid[start_pos] = Cell.START
-        self.first_start_pos = start_pos
+        grid[first_start_pos] = Cell.START
+        self.first_start_pos = first_start_pos
 
         return grid
 
@@ -428,16 +447,21 @@ class GridApp:
 
         self.clear_path()
 
-        while True:
-            if self.second_start_pos is not None and self.second_start_pos not in [
-                Cell.TREASURE,
-                Cell.TRAP,
-            ]:
-                break
-            self.second_start_pos = (
-                self.rand.randrange(self.grid_size),
-                self.rand.randrange(self.grid_size),
-            )
+        if self.set_second_start is not None and isinstance(
+            self.set_second_start, tuple
+        ):
+            self.second_start_pos = self.set_second_start
+        else:
+            while True:
+                if self.second_start_pos is not None and self.second_start_pos not in [
+                    Cell.TREASURE,
+                    Cell.TRAP,
+                ]:
+                    break
+                self.second_start_pos = (
+                    self.rand.randrange(self.grid_size),
+                    self.rand.randrange(self.grid_size),
+                )
 
         self.grid[self.first_start_pos] = Cell.START_FIRST
         self.grid[self.second_start_pos] = Cell.START_SECOND
