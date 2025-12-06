@@ -1,31 +1,70 @@
+"""Treasure Hunt AI visualization application.
+
+This module provides a GUI-based grid environment for visualizing and comparing various search
+algorithms, including uninformed search, informed search, adversarial search, and Bayesian search,
+in a treasure hunt scenario with traps and walls.
+"""
+
 import copy
 import random
 import time
 import tkinter as tk
+from tkinter import ttk
+
 import numpy as np
-from algorithms import bfs, dfs, ucs, greedy, a_star
-from algorithms.minimax import Minimax
-from constants import Cell, PATH_GRADIENT_START, PATH_GRADIENT_END
-from algorithms.belief_grid import BeliefGrid
+
+from algorithms import bfs, dfs, ucs, greedy, a_star, Minimax, BeliefGrid
+from constants import Cell, PATH_GRADIENT_END, PATH_GRADIENT_START
 from utils import (
     euclidean_distance,
-    manhattan_distance,
+    generate_gradient_colors,
     get_closest_point,
     get_moves,
     get_random_seed,
-    generate_gradient_colors,
+    manhattan_distance,
 )
 
 
 class GridApp:
+    """GUI application for visualizing pathfinding algorithms in a treasure hunt game.
+
+    This class creates an interactive grid-based environment where various search algorithms can be
+    visualized finding paths to treasures while avoiding traps (only going through when capable and
+    necessary) and walls. It supports both single-agent and adversarial multi-agent scenarios.
+
+    Attributes:
+        grid_size (int): The size of the square grid (default 20x20).
+        treasure_total (int): Number of treasures to place on the grid.
+        trap_total (int): Number of traps to place on the grid.
+        wall_total (int): Number of walls to place on the grid.
+        first_start_pos (tuple): Starting position for the first agent.
+        second_start_pos (tuple): Starting position for the second agent (adversarial mode).
+        treasure_pos (list): List of treasure positions on the grid.
+        cell_size (int): Size of each grid cell in pixels.
+        seed (int): Random seed for grid generation.
+        animation_speed (int): Milliseconds between animation steps.
+        is_animating (bool): Flag indicating if an animation is in progress.
+        minimax_depth (int): Search depth limit for minimax algorithms.
+    """
+
     def __init__(
         self,
-        grid_size=10,
+        grid_size=20,
         treasure_total=2,
-        trap_total=4,
+        trap_total=2,
         wall_total=15,
         set_prompt=None,
     ):
+        """Initialize the GridApp with specified parameters.
+
+        Args:
+            grid_size (int, optional): Size of the square grid. Defaults to 20.
+            treasure_total (int, optional): Number of treasures. Defaults to 2.
+            trap_total (int, optional): Number of traps. Defaults to 4.
+            wall_total (int, optional): Number of walls. Defaults to 15.
+            set_prompt (int, optional): Predefined scenario number (1 or 2).
+                Defaults to None for random generation.
+        """
         self.grid_size = grid_size
         self.treasure_total = treasure_total
         self.trap_total = trap_total
@@ -77,9 +116,6 @@ class GridApp:
         self.root = tk.Tk()
         self.root.title("Treasure Hunt AI")
 
-        # Import ttk for native OS styling
-        from tkinter import ttk
-
         self.ttk = ttk
 
         self.canvas = tk.Canvas(
@@ -112,7 +148,7 @@ class GridApp:
         run_label = tk.Label(button_frame, text="Run:", font=("Arial", 11))
         run_label.grid(row=0, column=0, rowspan=2, padx=10, sticky="ns")
 
-        # Top row: non-heuristics algorithms
+        # Row 1: uninformed search
         tk.Button(
             button_frame, text="BFS", command=lambda: self.run_search_algorithm("BFS")
         ).grid(row=0, column=1, padx=5, pady=3)
@@ -123,7 +159,7 @@ class GridApp:
             button_frame, text="UCS", command=lambda: self.run_search_algorithm("UCS")
         ).grid(row=0, column=3, padx=5, pady=3)
 
-        # Bottom row: heuristic-based algorithms
+        # Row 2: informed search
         tk.Button(
             button_frame,
             text="Greedy",
@@ -140,6 +176,7 @@ class GridApp:
             command=lambda: self.run_search_algorithm("A* (Euclidean)"),
         ).grid(row=1, column=3, padx=5, pady=3)
 
+        # Row 3: adversarial search
         tk.Button(
             button_frame,
             text="Minimax",
@@ -150,7 +187,8 @@ class GridApp:
             text="Alpha-Beta",
             command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
         ).grid(row=2, column=2, padx=5, pady=3)
-        # button for Bayesian
+
+        # Row 4: Bayesian search
         tk.Button(
             button_frame,
             text="Bayes (Low Noise)",
@@ -206,6 +244,7 @@ class GridApp:
         set_seed_frame.pack(pady=(0, 10))
 
         def validate_seed_input(text):
+            """Validate that seed input is a valid 32-bit unsigned integer."""
             return text.isdigit() and int(text) < 2**32 and int(text) >= 0 or text == ""
 
         vcmd = (self.root.register(validate_seed_input), "%P")
@@ -232,26 +271,43 @@ class GridApp:
         self.draw_grid()
 
     def update_depth(self, value):
-        """Update the minimax depth when slider changes"""
+        """Update the minimax search depth when slider changes.
+
+        Args:
+            value (str): The new depth value from the slider.
+        """
         self.minimax_depth = int(float(value))
         self.depth_label.config(text=str(self.minimax_depth))
 
     def get_seed_entry(self):
-        value = self.set_seed_entry.get().strip()
+        """Get the seed value from the entry field.
 
+        Returns:
+            int: The entered seed value, or current seed if entry is empty.
+        """
+        value = self.set_seed_entry.get().strip()
         return int(value) if value != "" else self.seed
 
-    # Copies current seed to the clipboard
     def copy_seed(self):
+        """Copy the current seed to the system clipboard."""
         self.root.clipboard_clear()
         self.root.clipboard_append(str(self.seed))
 
-    # Sets maze seed based on a given seed or a random 32-bit seed otherwise
     def set_seed(self, new_seed=None):
+        """Set the maze generation seed and regenerate the grid.
+
+        Args:
+            new_seed (int, optional): The seed to use. If None, generates a random seed.
+        """
         self.seed = new_seed if new_seed is not None else get_random_seed()
         self.regenerate_grid()
 
     def create_grid(self):
+        """Create a new grid with treasures, traps, walls, and starting position.
+
+        Returns:
+            np.ndarray: A 2D numpy array representing the grid with cell types.
+        """
         self.rand = random.Random(self.seed)
 
         # Create empty grid
@@ -337,6 +393,7 @@ class GridApp:
         return grid
 
     def regenerate_grid(self):
+        """Regenerate the grid with the current seed and reset the display."""
         if self.is_animating:
             return
 
@@ -347,6 +404,11 @@ class GridApp:
         self.cur_seed_label.config(text=f"Current Seed: {self.seed}")
 
     def draw_grid(self, *, callback=lambda: None):
+        """Draw the current grid state on the canvas.
+
+        Args:
+            callback (callable, optional): Function to call after drawing. Defaults to no-op.
+        """
         self.canvas.delete("all")
 
         for r in range(self.grid_size):
@@ -379,6 +441,7 @@ class GridApp:
         callback()
 
     def run_bfs(self):
+        """Execute and visualize the Breadth-First Search algorithm."""
         if self.is_animating:
             return
 
@@ -398,6 +461,10 @@ class GridApp:
         self.animate_path(path, cells_expanded, execution_time, "BFS")
 
     def run_dfs(self):
+        """Execute and visualize the Depth-First Search algorithm.
+
+        Tries all possible move orders and returns the best path found.
+        """
         if self.is_animating:
             return
 
@@ -442,6 +509,11 @@ class GridApp:
         self.animate_path(path, cells_expanded, execution_time, "DFS")
 
     def run_minimax(self, use_pruning):
+        """Execute and visualize the Minimax algorithm with optional alpha-beta pruning.
+
+        Args:
+            use_pruning (bool): Whether to use alpha-beta pruning optimization.
+        """
         if self.is_animating:
             return
 
@@ -510,6 +582,11 @@ class GridApp:
         Minimax.print_tree(minimax, root)
 
     def run_search_algorithm(self, algorithm):
+        """Execute and visualize the specified search algorithm.
+
+        Args:
+            algorithm (str): Name of the algorithm to run (e.g., "BFS", "A* (Manhattan)").
+        """
         if self.is_animating:
             return
 
@@ -595,86 +672,93 @@ class GridApp:
             )
 
     def run_bayesian_agent(self, noise_level="Low"):
+        """Execute and visualize the Bayesian agent with specified noise level.
+
+        Args:
+            noise_level (str, optional): Sensor noise level ("Low", "Medium", or "High").
+                Defaults to "Low".
+        """
         if self.is_animating:
             return
 
         self.clear_path()
-        if noise_level == "Low": fp, fn = 0.05, 0.05
-        elif noise_level == "Medium": fp, fn = 0.1, 0.2
-        elif noise_level == "High": fp, fn = 0.2, 0.3
-        else: fp, fn = 0.1, 0.1
+        match noise_level.lower():
+            case "low":
+                fp, fn = 0.05, 0.05
+            case "medium":
+                fp, fn = 0.1, 0.2
+            case "high":
+                fp, fn = 0.2, 0.3
+            case _:
+                fp, fn = 0.1, 0.1
 
         print(f"\n{'='*20} Starting Bayesian Search ({noise_level}) {'='*20}")
-
 
         def print_belief_grid(bg_obj, title):
             print(f"\n--- {title} ---")
             header = "      " + " ".join([f"{c:^5}" for c in range(self.grid_size)])
             print(header)
-            
+
             for r in range(self.grid_size):
                 row_str = f"{r:^4} |"
                 for c in range(self.grid_size):
                     val = bg_obj.beliefs[r][c]
-                    if val is None: val = bg_obj.prior
-                    
-                    # Visual formatting:
-                    # [ ] for High Probability (> 50%)
-                    #  * for Zero (Found/Impossible)
+                    if val is None:
+                        val = bg_obj.prior
+
+                    # [ ] for high probability (> 50%)
+                    #  *  for zero (found/impossible)
                     if val > 0.5:
                         row_str += f"[{val:.2f}]"
                     elif val == 0.0:
-                        row_str += "  * " 
+                        row_str += "  *  "
                     elif val < 0.001:
-                         row_str += " ... " 
+                        row_str += " ... "
                     else:
                         row_str += f" {val:.3f} "
                 print(row_str)
             print("-" * len(header))
 
-
         def handle_found_treasure(bg_obj, r, c):
-            #Zero out the found cell
+            # Zero out the found cell
             bg_obj.beliefs[r][c] = 0.0
-            
+
             total_prob = sum(sum(row) for row in bg_obj.beliefs)
-            
+
             if total_prob > 0:
                 for row_idx in range(self.grid_size):
                     for col_idx in range(self.grid_size):
                         bg_obj.beliefs[row_idx][col_idx] /= total_prob
-            
-            #Clear the 'popped' history so the agent can re-evaluate 
-            # nearby cells for the SECOND treasure.
+
+            # Clear the 'popped' history so the agent can re-evaluate nearby cells for the SECOND
+            # treasure
             bg_obj.popped.clear()
 
-
         bg = BeliefGrid(self.grid, self.rand, false_positive=fp, false_negative=fn)
-        
         curr_pos = self.first_start_pos
-        path_history = [] 
+        path_history = []
         scans = 0
-        
-        
+
         treasures_found = 0
         total_treasures = self.treasure_total
-        
-        print_belief_grid(bg, f"Belief Map at t=0 (Uniform Prior)")
+
+        print_belief_grid(bg, "Belief Map at t=0 (Uniform Prior)")
 
         start_time = time.time()
         max_steps = self.grid_size * self.grid_size * 3
-        
 
         while treasures_found < total_treasures and len(path_history) < max_steps:
-            
-            
-            if (self.grid[curr_pos] == Cell.TREASURE or self.grid[curr_pos] == Cell.TREASURE_COLLECTED) \
-               and bg.beliefs[curr_pos[0]][curr_pos[1]] > 0.0:
-                
+            if (
+                self.grid[curr_pos] == Cell.TREASURE
+                or self.grid[curr_pos] == Cell.TREASURE_COLLECTED
+            ) and bg.beliefs[curr_pos[0]][curr_pos[1]] > 0.0:
                 treasures_found += 1
-                print_belief_grid(bg, f"Belief Map at Detection #{treasures_found} (Location: {curr_pos})")
+                print_belief_grid(
+                    bg,
+                    f"Belief Map at Detection #{treasures_found} (Location: {curr_pos})",
+                )
                 handle_found_treasure(bg, curr_pos[0], curr_pos[1])
-                
+
                 if treasures_found == total_treasures:
                     print("All treasures found!")
                     break
@@ -683,50 +767,60 @@ class GridApp:
             scans += 1
 
             if scans == 10:
-                print_belief_grid(bg, f"Belief Map after 10 scans")
+                print_belief_grid(bg, "Belief Map after 10 scans")
 
             try:
                 target = bg.pop(position=curr_pos, error=False)
             except (IndexError, TypeError):
                 print("Bayesian Agent: No more targets found.")
                 break
-                
-            if target is None: break
 
+            if target is None:
+                break
 
             path_result = a_star(self.grid, curr_pos, target, manhattan_distance)
             path_segment = path_result[0]
 
             if path_segment is None:
-                bg.beliefs[target[0]][target[1]] = 0.0 
+                bg.beliefs[target[0]][target[1]] = 0.0
                 continue
 
-            if len(path_segment) > 0 and isinstance(path_segment[0], tuple) and len(path_segment[0]) == 2:
-                 _, positions = zip(*path_segment)
+            if (
+                len(path_segment) > 0
+                and isinstance(path_segment[0], tuple)
+                and len(path_segment[0]) == 2
+            ):
+                _, positions = zip(*path_segment)
             else:
-                 positions = path_segment
+                positions = path_segment
 
             if len(path_history) > 0:
                 path_history.extend(positions[1:])
             else:
                 path_history.extend(positions)
-                
-            curr_pos = target 
+
+            curr_pos = target
 
         end_time = time.time()
         execution_time = (end_time - start_time) * 1000
         final_entropy = bg.get_entropy()
-        
+
         print(f"\nResults for {noise_level} Noise:")
         print(f"  - Scans: {scans}")
         print(f"  - Moves: {len(path_history)}")
         print(f"  - Final Entropy: {final_entropy:.4f}")
- 
 
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
-        
-        
+
     def get_path_score(self, path):
+        """Calculate the score for a given path.
+
+        Args:
+            path (list): List of (row, col) positions in the path.
+
+        Returns:
+            float: Path score (higher is better). +10 per treasure, -5 per trap, -0.5 per step.
+        """
         cost = -len(path) / 2  # -0.5 pts per length
 
         for r, c in path:
@@ -738,7 +832,9 @@ class GridApp:
         return cost
 
     def clear_path(self):
+        """Clear all path markings from the grid and reset to initial state."""
         grid = self.grid
+        grid[grid == Cell.START_SECOND] = Cell.EMPTY
         grid[grid == Cell.PATH] = Cell.EMPTY
         grid[grid == Cell.PATH_FIRST] = Cell.EMPTY
         grid[grid == Cell.PATH_SECOND] = Cell.EMPTY
@@ -748,10 +844,18 @@ class GridApp:
 
         self.draw_grid()
 
-    # Animate the path cell by cell
     def animate_path(
         self, path, cells_expanded, execution_time, algorithm_name, *, path_costs=None
     ):
+        """Animate the solution path cell by cell with gradient coloring.
+
+        Args:
+            path (list): List of (row, col) positions in the path.
+            cells_expanded (int): Number of cells expanded during search.
+            execution_time (float): Algorithm execution time in milliseconds.
+            algorithm_name (str): Name of the algorithm for display.
+            path_costs (list, optional): List of costs for each position. Defaults to None.
+        """
         self.is_animating = True
         self.path_colors = {}
 
@@ -763,6 +867,7 @@ class GridApp:
             self.path_colors[pos] = gradient_colors[i]
 
         def animate_costs():
+            """Display path costs on the grid cells."""
             if path_costs is None:
                 return
 
@@ -832,10 +937,24 @@ class GridApp:
         path2_costs=None,
         pruning_ratio=None,
     ):
+        """Animate two competing paths in adversarial search.
+
+        Args:
+            winner (int or list): Index of winning agent (0 or 1) or [0, 1] for tie.
+            path1 (list): First agent's path.
+            path2 (list): Second agent's path.
+            total_cells_expanded (int): Total cells expanded by both agents.
+            total_execution_time (float): Total execution time in milliseconds.
+            algorithm_name (str): Name of the algorithm for display.
+            path1_costs (list, optional): Costs for first path. Defaults to None.
+            path2_costs (list, optional): Costs for second path. Defaults to None.
+            pruning_ratio (float, optional): Ratio of pruned nodes. Defaults to None.
+        """
         self.is_animating = True
         self.path_colors = {}
 
         def animate_costs():
+            """Display path costs for both agents on the grid cells."""
             if path1_costs is None:
                 return
 
@@ -956,8 +1075,10 @@ class GridApp:
         path2_cost = len(path2) - 1
 
         stats_text = (
-            f"{algorithm_name} Results:\nWinner: {winner_text} | Path A Cost: {path1_cost} | Path B Cost: {path2_cost}\n"
-            + f"Total Cells Expanded: {total_cells_expanded} | Total Time: {total_execution_time:.3f} ms"
+            f"{algorithm_name} Results:\nWinner: {winner_text} | Path A Cost: {path1_cost} | "
+            + f"Path B Cost: {path2_cost}\n"
+            + f"Total Cells Expanded: {total_cells_expanded} | "
+            + f"Total Time: {total_execution_time:.3f} ms"
         )
         if pruning_ratio is not None:
             stats_text += f"\nPruning Ratio: {pruning_ratio:.2f}"
@@ -965,7 +1086,11 @@ class GridApp:
         self.stats_label.config(text=stats_text)
 
     def visualize_belief(self, bg):
+        """Visualize the belief probabilities on the grid.
 
+        Args:
+            bg (BeliefGrid): The belief grid containing probability distributions.
+        """
         for r in range(self.grid_size):
             for c in range(self.grid_size):
                 # Skip walls/static items if you want, or just draw over them
@@ -976,9 +1101,8 @@ class GridApp:
                 if prob is None:
                     prob = bg.prior
 
-                # Draw a circle with opacity based on probability
-                # Since tkinter doesn't support alpha easily, we scale color
-                # from White (0%) to Red (100%)
+                # Draw a circle with opacity based on probability by scaling color from white (0%)
+                # to red (100%)
                 intensity = int(255 * (1 - prob))  # 1.0 -> 0 (Dark), 0.0 -> 255 (Light)
                 color = f"#ff{intensity:02x}{intensity:02x}"
 
@@ -992,4 +1116,5 @@ class GridApp:
         self.root.update()
 
     def run(self):
+        """Start the GUI main event loop."""
         self.root.mainloop()
