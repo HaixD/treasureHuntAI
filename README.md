@@ -20,8 +20,8 @@ Beliefs are stored in a 2D list where each value is initialized to number of tre
 WRITE DECISION POLICY HERE PLS
 
 # Experiments and Results
-|Seed      |Noise Level|Average Steps|Average Scans|Average Entropy at Detection|Detection Accuracy|
-|----------|-----------|-------------|-------------|----------------------------|------------------|
-|          |Low        |             |             |                            |                  |
-|          |Medium     |             |             |                            |                  |
-|          |High       |             |             |                            |                  |
+|Noise Level|Average Steps|Average Scans|Average Entropy at Detection|Detection Accuracy|
+|-----------|-------------|-------------|----------------------------|------------------|
+|Low        |             |             |                            |100%              |
+|Medium     |             |             |                            |100%              |
+|High       |410.9        |509.6        |5.55823                     |100%              |

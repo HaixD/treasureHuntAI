@@ -20,9 +20,9 @@ from utils import (
 class GridApp:
     def __init__(
         self,
-        grid_size=10,
+        grid_size=20,
         treasure_total=2,
-        trap_total=4,
+        trap_total=2,
         wall_total=15,
         set_prompt=None,
     ):
