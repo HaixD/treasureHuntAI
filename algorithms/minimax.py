@@ -1,3 +1,10 @@
+"""Minimax algorithm implementation for adversarial grid-based treasure hunt.
+
+This module provides a Minimax search algorithm with optional alpha-beta pruning for two-player
+competitive pathfinding where agents compete to collect treasures on a grid with obstacles and
+traps.
+"""
+
 from copy import deepcopy
 from dataclasses import dataclass
 import numpy as np
@@ -14,6 +21,20 @@ class Agent:
     traps: int = 0
 
 class Minimax:
+    """Adversarial search using Minimax algorithm with optional alpha-beta pruning.
+
+    This class implements a two-player zero-sum game where agents compete to collect treasures on a
+    grid. The maximizing agent tries to maximize their advantage while the minimizing agent tries to
+    minimize it.
+
+    Attributes:
+        grid (np.ndarray): The game grid containing cells, treasures, traps, and walls.
+        max_treasure_distance (float): Maximum possible distance to any treasure.
+        agents (tuple[Agent, Agent]): Tuple of two agents (maximizer, minimizer).
+        paths (tuple[list, list]): Paths taken by each agent.
+        treasures (set): Set of remaining treasure positions.
+    """
+
     class Node:
         def __init__(self, state:"Minimax|tuple", *, parent:"Minimax.Node|None"=None, is_partial=False):
             self.state = state
@@ -31,12 +52,22 @@ class Minimax:
             return self.value is None or type(self.state) is tuple
 
         def is_leaf(self):
+            """Check if this is a leaf node with no children.
+
+            Returns:
+                bool: True if the node has no children.
+            """
             return len(self.children) == 0
 
         def get_agent_index(self, swap=False):
             return (self.depth + swap) % 2
 
         def shallow_expand(self):
+            """Create child nodes for all valid moves without building full states.
+
+            This creates partial nodes that will be built later as needed, improving
+            efficiency by avoiding unnecessary state copying.
+            """
             if self.expanded:
                 return
 
@@ -63,6 +94,12 @@ class Minimax:
             self.debug["expansions"] = cells_expanded1 + cells_expanded2
 
         def build_node(self, build_value=False):
+            """Build the full game state for this node if it's partial.
+
+            Args:
+                build_value (bool, optional): Whether to compute the utility value for this node.
+                    Defaults to False.
+            """
             if not self.is_partial():
                 return
 
@@ -126,6 +163,13 @@ class Minimax:
             return next_node
 
     def __init__(self, grid, start_pos1, start_pos2):
+        """Initialize a Minimax game instance.
+
+        Args:
+            grid (np.ndarray): 2D grid containing cells, treasures, traps, and walls.
+            start_pos1 (tuple): Starting position for agent 1 (maximizer) as (row, col).
+            start_pos2 (tuple): Starting position for agent 2 (minimizer) as (row, col).
+        """
         self.grid = grid
         self.paths = ([], [])
         self.length_cache = {} # length_cache[treasure_pos][pos] = cached length
@@ -142,6 +186,11 @@ class Minimax:
         self.update_treasures()
 
     def __str__(self):
+        """Return a string representation of the current game state.
+
+        Returns:
+            str: Grid visualization with 'A' for agent 1 and 'B' for agent 2.
+        """
         grid = deepcopy(self.grid)
         grid[*self.agents[0].position] = 8
         grid[*self.agents[1].position] = 9
@@ -223,7 +272,10 @@ class Minimax:
             self.update_treasures()
         elif self.grid[move] == Cell.TRAP:
             self.agents[agent_index].traps += 1
+            self.agents[agent_index].traps += 1
 
+        self.agents[agent_index].position = move
+        self.paths[agent_index].append(move)
         self.agents[agent_index].position = move
         self.paths[agent_index].append(move)
 
@@ -236,6 +288,7 @@ class Minimax:
                 return float("inf"), 0
             elif agent.treasures < other.treasures:
                 return -float("inf"), 0
+
             return 0, 0
 
         distance, cells_expanded = self.get_a_star_length(agent.position, agent.current_goal)
@@ -263,6 +316,7 @@ class Minimax:
             print(curr.state, end='\n\n')
 
         def get_expansions(root):
+            """Recursively count total expansions in the tree."""
             total = 0
             for child in root.children:
                 total += get_expansions(child)
@@ -272,6 +326,23 @@ class Minimax:
         return curr, get_expansions(root)
 
     def search_increment(self, state=None, *, limit=5, prune=False, move=None):
+        """Perform one incremental step of Minimax search.
+
+        This allows stepping through the search one move at a time, useful for visualization or
+        interactive applications.
+
+        Args:
+            state (dict, optional): Current search state containing 'curr', 'limit',
+                and 'prune'. Defaults to None (creates initial state).
+            limit (int, optional): Depth limit for minimax search. Defaults to 5.
+            prune (bool, optional): Whether to use alpha-beta pruning. Defaults to False.
+            move (int, optional): Index of child to select. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing:
+                - state (dict): Updated search state.
+                - moves (list): List of possible next moves (empty if game over).
+        """
         state = state or {
             "curr": Minimax.Node(self.copy()),
             "limit": limit,
@@ -291,6 +362,12 @@ class Minimax:
         return state, list(map(lambda node: node.state, state["curr"].children))
 
     def print_tree(self, node, depth=0):
+        """Recursively print the minimax game tree.
+
+        Args:
+            node (Node): The node to print.
+            depth (int, optional): Current depth in the tree. Defaults to 0.
+        """
         rows = ["  " * depth + row for row in str(node.state).split("\n")]
         rows[0] += f" {round(node.value, 2)}"
         text = "\n".join(rows)

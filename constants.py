@@ -1,7 +1,24 @@
+"""Cell types and visual properties for a treasure hunt grid game.
+
+This module defines the Cell enumeration which represents different states of cells in a grid-based
+treasure hunt game. Each cell type has associated visual properties (colors and symbols) for
+rendering the grid.
+
+The module also defines gradient colors for rendering paths from the start position to treasure
+locations.
+"""
+
 from enum import IntEnum
 
 
 class Cell(IntEnum):
+    """Enumeration of cell types in a treasure hunt grid.
+
+    This enum defines the various states a cell can have in the grid, including empty spaces, walls,
+    treasures, traps, starting positions, and path markers. Each cell type has associated visual
+    properties like colors and symbols for rendering.
+    """
+
     EMPTY = 0
     WALL = 1
     TREASURE = 2
@@ -18,7 +35,12 @@ class Cell(IntEnum):
 
     @property
     def color(self):
-        """Get associated color with cell type."""
+        """Get the display color associated with this cell type.
+
+        Returns:
+            str: A color name (e.g., 'white', 'gold', 'pink') representing the visual appearance of
+                this cell type, or None if no color is defined.
+        """
         colors = {
             Cell.EMPTY: "white",
             Cell.WALL: "gold",
@@ -38,7 +60,12 @@ class Cell(IntEnum):
 
     @property
     def symbol(self):
-        """Get associated symbol with cell type."""
+        """Get the character symbol associated with this cell type.
+
+        Returns:
+            str: A single character representing this cell type (e.g., '#' for walls, 'T' for
+                treasure), or None if no symbol is defined.
+        """
         symbols = {
             Cell.WALL: "#",
             Cell.TREASURE: "T",
@@ -53,8 +80,10 @@ class Cell(IntEnum):
         return symbols.get(self)
 
 
-# Path gradient colors (start and end RGB values)
 # Start RGB:    (144, 238, 144)
-# Treasure RGB: (255, 192, 203)
 PATH_GRADIENT_START = (144, 238, 144)
+"""tuple: RGB color values for the start of path gradient (light green)."""
+
+# Treasure RGB: (255, 192, 203)
 PATH_GRADIENT_END = (255, 192, 203)
+"""tuple: RGB color values for the end of path gradient (light pink)."""
