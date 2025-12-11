@@ -509,6 +509,37 @@ class GridApp:
 
         # Animate solution path
         self.animate_path(path, cells_expanded, execution_time, "BFS")
+    def run_ucs(self):
+        """Execute and visualize the Uniform Cost Search algorithm to the nearest treasure."""
+        if self.is_animating:
+            return
+
+        self.clear_path()
+        start_time = time.time()
+        
+        # 1. Identify the goal: The closest treasure
+        if not self.treasure_pos:
+            self.stats_label.config(text="UCS: No treasures to find!")
+            return
+            
+        # We assume the closest treasure by Manhattan distance is our target
+        target_treasure = get_closest_point(
+            self.first_start_pos, self.treasure_pos, manhattan_distance
+        )
+
+        # 2. Call UCS with the required 3 arguments: grid, start, goal
+        result = ucs(self.grid, self.first_start_pos, target_treasure)
+        end_time = time.time()
+
+        if result[0] is None:
+            self.stats_label.config(text="UCS: No path found!")
+            return
+
+        path, cells_expanded = result
+        execution_time = (end_time - start_time) * 1000
+
+        # Animate solution path
+        self.animate_path(path, cells_expanded, execution_time, "UCS")
 
     def run_dfs(self):
         """Execute and visualize the Depth-First Search algorithm.
@@ -652,6 +683,9 @@ class GridApp:
         if algorithm.lower() == "dfs":
             self.run_dfs()
             return
+        if algorithm.lower() == "ucs":
+            self.run_ucs()
+            return
 
         self.clear_path()
 
@@ -667,8 +701,8 @@ class GridApp:
                 cur_pos, treasure_pos, manhattan_distance
             )
             match algorithm.lower():
-                case "ucs":
-                    result = ucs(self.grid, cur_pos, closest_treasure_pos)
+               #case "ucs":
+                  #  result = ucs(self.grid, cur_pos, closest_treasure_pos)
                 case "greedy":
                     result = greedy(
                         self.grid,
@@ -756,9 +790,9 @@ class GridApp:
                     if val > 0.5:
                         row_str += f"[{val:.2f}]"
                     elif val == 0.0:
-                        row_str += "  *  "
+                        row_str += "   *   "
                     elif val < 0.001:
-                        row_str += " ... "
+                        row_str += " ..... "
                     else:
                         row_str += f" {val:.3f} "
                 print(row_str)
@@ -784,6 +818,9 @@ class GridApp:
         path_history = []
         scans = 0
 
+        entropy_values = []
+        entropy_values.append(bg.get_entropy())
+        
         treasures_found = 0
         total_treasures = self.treasure_total
 
@@ -811,6 +848,8 @@ class GridApp:
             bg.scan(curr_pos)
             scans += 1
 
+
+            entropy_values.append(bg.get_entropy())
             if scans == 10:
                 print_belief_grid(bg, "Belief Map after 10 scans")
 
@@ -849,7 +888,14 @@ class GridApp:
         end_time = time.time()
         execution_time = (end_time - start_time) * 1000
         final_entropy = bg.get_entropy()
-
+        
+        print("\n" + "="*30)
+        print("COPY THIS LIST FOR EXCEL/GRAPHING:")
+        print("="*30)
+        # Convert numbers to string with 4 decimal places
+        print(", ".join([f"{e:.4f}" for e in entropy_values]))
+        print("="*30 + "\n")
+        
         print(f"\nResults for {noise_level} Noise:")
         print(f"  - Scans: {scans}")
         print(f"  - Moves: {len(path_history)}")
