@@ -111,7 +111,7 @@ class Minimax:
 
             if self.parent:
                 new_state = self.parent.state.copy()
-                new_state.apply_move(move, agent_index)
+                self.debug["expansions"] += new_state.apply_move(move, agent_index)
 
                 self.state = new_state
 
@@ -274,10 +274,12 @@ class Minimax:
         return copied
 
     def apply_move(self, move, agent_index):
+        cells_expanded = 0
+        
         if move in self.treasures:
             self.treasures.remove(move)
             self.agents[agent_index].treasures += 1
-            self.update_treasures()
+            cells_expanded = self.update_treasures()
         elif self.grid[move] == Cell.TRAP:
             self.agents[agent_index].traps += 1
             self.agents[agent_index].traps += 1
@@ -286,6 +288,8 @@ class Minimax:
         self.paths[agent_index].append(move)
         self.agents[agent_index].position = move
         self.paths[agent_index].append(move)
+
+        return cells_expanded
 
     def get_utility_value_expansions(self, agent_index):
         agent = self.agents[agent_index]
@@ -323,13 +327,14 @@ class Minimax:
             curr = curr.get_next_node()
             print(curr.state, end='\n\n')
 
-        def get_expansions(root):
+        def get_expansions(node):
             """Recursively count total expansions in the tree."""
-            total = 0
-            for child in root.children:
+            total = node.debug["expansions"]
+
+            for child in node.children:
                 total += get_expansions(child)
 
-            return total + root.debug["expansions"]
+            return total
 
         return curr, get_expansions(root)
 
