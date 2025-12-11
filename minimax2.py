@@ -57,10 +57,14 @@ class Minimax2:
             self.expanded = True
 
         def generate_value(self):
-            player, cells_expanded1 = self.state.get_utility_value_expansions(self.get_agent_index())
-            other, cells_expanded2 = self.state.get_utility_value_expansions(self.get_agent_index(True))
+            # player, cells_expanded1 = self.state.get_utility_value_expansions(self.get_agent_index())
+            # other, cells_expanded2 = self.state.get_utility_value_expansions(self.get_agent_index(True))
+            
+            MAX_value, cells_expanded1 = self.state.get_utility_value_expansions(0)
+            MIN_value, cells_expanded2 = self.state.get_utility_value_expansions(1)
 
-            self.value = player - other
+            # self.value = player - other
+            self.value = MAX_value - MIN_value
             self.debug["expansions"] = cells_expanded1 + cells_expanded2
 
         def build_node(self, build_value=False):
@@ -112,12 +116,14 @@ class Minimax2:
             dfs(self)
 
         def get_next_node(self):
-            agent_index = self.get_agent_index(True)
+            agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                next_node = max(self.children, key=lambda node: node.value)
+                print(list(map(lambda node: node.value, self.children)))
+                next_node = max(self.children, key=lambda node: node.value if node.value is not None else -float('inf'))
             else:
-                next_node = min(self.children, key=lambda node: node.value)
+                print(list(map(lambda node: node.value, self.children)))
+                next_node = min(self.children, key=lambda node: node.value if node.value is not None else float('inf'))
 
             next_node.expanded = False
             next_node.children = []
@@ -137,7 +143,6 @@ class Minimax2:
                     self.treasures.add((r, c))
 
         # initialize agents
-        self.treasure_unit = self.grid.shape[0] * self.grid.shape[1]
         self.agents = (Agent(start_pos1, (-1, -1)), Agent(start_pos2, (-1, -1))) # PLACEHOLDER
         self.update_treasures()
 
@@ -146,8 +151,15 @@ class Minimax2:
         grid[*self.agents[0].position] = 8
         grid[*self.agents[1].position] = 9
 
+        grid[grid == 2] = 0
+        for treasure in self.treasures:
+            grid[*treasure] = 2
+
+        agent1_char = chr(ord('A') + self.agents[0].treasures)
+        agent2_char = chr(ord('Z') + self.agents[1].treasures)
+
         text = str(grid)
-        text = text.replace("0", " ").replace("8", "A").replace("9", "B")
+        text = text.replace("0", " ").replace("8", agent1_char).replace("9", agent2_char)
 
         return text
     
@@ -187,7 +199,6 @@ class Minimax2:
             self.agents[1].position,
         )
         copied.grid = self.grid
-        copied.treasure_unit = self.treasure_unit
         copied.agents= deepcopy(self.agents)
         copied.treasures = set(treasure for treasure in self.treasures)
         copied.paths = deepcopy(self.paths)
@@ -219,11 +230,11 @@ class Minimax2:
 
         distance, cells_expanded = self.get_a_star_length(agent.position, agent.current_goal)
 
-        distance_score = self.treasure_unit - distance
-        treasure_score = agent.treasures * self.treasure_unit ** 2
-        # trap score?
+        distance_score = -distance * 0.5
+        treasure_score = agent.treasures * 10
+        trap_score = -agent.traps * 5
 
-        total_score = distance_score + treasure_score
+        total_score = distance_score + treasure_score + trap_score
 
         return total_score, cells_expanded
     
@@ -294,4 +305,4 @@ if __name__ == "__main__":
     )
     minimax = Minimax2(grid, (3, 8), (3, len(grid[0]) - 1))
     print(minimax, end='\n\n')
-    node, _ = minimax.search()
+    node, _ = minimax.search(prune=True)
