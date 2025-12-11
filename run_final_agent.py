@@ -6,5 +6,5 @@ This script initializes and runs the GridApp GUI for visualizing pathfinding alg
 from grid_app import GridApp
 
 if __name__ == "__main__":
-    app = GridApp()
+    app = GridApp(set_prompt=1)
     app.run()

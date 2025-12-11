@@ -49,10 +49,6 @@ class GridApp:
 
     def __init__(
         self,
-        grid_size=20,
-        treasure_total=2,
-        trap_total=2,
-        wall_total=15,
         set_prompt=None,
     ):
         """Initialize the GridApp with specified parameters.
@@ -65,34 +61,65 @@ class GridApp:
             set_prompt (int, optional): Predefined scenario number (1 or 2).
                 Defaults to None for random generation.
         """
-        self.grid_size = grid_size
-        self.treasure_total = treasure_total
-        self.trap_total = trap_total
-        self.wall_total = wall_total
-        self.treasure_total = treasure_total
+        match set_prompt:
+            case 1:
+                self.set_grid_size = 25
+                self.set_first_start = None
+                self.set_second_start = None
+                self.set_treasure_total = 3
+                self.set_treasure_pos = []
+                self.set_trap_total = 4
+                self.set_trap_pos = []
+                self.set_trap_range = 0
+                self.set_wall_total = 20
+            case 2:
+                self.set_grid_size = 30
+                self.set_first_start = None
+                self.set_second_start = None
+                self.set_treasure_total = 4
+                self.set_treasure_pos = []
+                self.set_trap_total = 12
+                self.set_trap_pos = []
+                self.set_trap_range = 1
+                self.set_wall_total = 20
+            case 3:
+                self.set_grid_size = 20
+                self.set_first_start = None
+                self.set_second_start = None
+                self.set_treasure_total = 3
+                self.set_treasure_pos = []
+                self.set_trap_total = 12
+                self.set_trap_pos = []
+                self.set_trap_range = 2
+                self.set_wall_total = 20
+            case 4:
+                self.set_grid_size = 30
+                self.set_first_start = None
+                self.set_second_start = None
+                self.set_treasure_total = 3
+                self.set_treasure_pos = []
+                self.set_trap_total = 0
+                self.set_trap_pos = []
+                self.set_trap_range = 0
+                self.set_wall_total = 20
+            case _:
+                self.set_grid_size = 20
+                self.set_first_start = None
+                self.set_second_start = None
+                self.set_treasure_total = 2
+                self.set_treasure_pos = []
+                self.set_trap_total = 4
+                self.set_trap_pos = []
+                self.set_trap_range = 0
+                self.set_wall_total = 15
+
+        self.grid_size = self.set_grid_size
+        self.treasure_total = self.set_treasure_total
+        self.trap_total = self.set_trap_total
+        self.wall_total = self.set_wall_total
         self.first_start_pos = None
         self.second_start_pos = None
         self.treasure_pos = None
-
-        match set_prompt:
-            case 1:
-                self.set_first_start = (0, 0)
-                self.set_second_start = (13, 13)
-                self.set_treasures = [(7, 7)]
-                self.set_traps = None
-                self.set_trap_range = 0
-            case 2:
-                self.set_first_start = (2, 12)
-                self.set_second_start = (12, 2)
-                self.set_treasures = [(6, 5), (7, 10), (10, 8)]
-                self.set_traps = None
-                self.set_trap_range = 1
-            case _:
-                self.set_first_start = None
-                self.set_second_start = None
-                self.set_treasures = None
-                self.set_traps = None
-                self.set_trap_range = 0
 
         # Inversely scale cell size based on grid size
         self.total_grid_pixels = 500
@@ -318,10 +345,10 @@ class GridApp:
         self.treasure_pos = []
         treasure_count = 0
         while treasure_count < self.treasure_total:
-            if self.set_treasures is not None and treasure_count < len(
-                self.set_treasures
+            if self.set_treasure_pos is not None and treasure_count < len(
+                self.set_treasure_pos
             ):
-                cur_treasure_pos = self.set_treasures[treasure_count]
+                cur_treasure_pos = self.set_treasure_pos[treasure_count]
                 treasure_pos = (cur_treasure_pos[0], cur_treasure_pos[1])
             else:
                 treasure_pos = (
@@ -336,33 +363,24 @@ class GridApp:
         # Place traps
         trap_count = 0
         while trap_count < self.trap_total:
-            if self.set_traps is not None and trap_count < len(self.set_traps):
-                cur_trap_pos = self.set_traps[trap_count]
+            if self.set_trap_pos is not None and trap_count < len(self.set_trap_pos):
+                cur_trap_pos = self.set_trap_pos[trap_count]
                 trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
             else:
                 random_treasure_pos = random.choice(self.treasure_pos)
-                if self.set_trap_range > 0:
-                    trap_pos = (
-                        self.rand.randrange(
-                            max(random_treasure_pos[0] - self.set_trap_range, 0),
-                            min(
-                                random_treasure_pos[0] + self.set_trap_range,
-                                self.grid_size,
-                            ),
-                        ),
-                        self.rand.randrange(
-                            max(random_treasure_pos[1] - self.set_trap_range, 0),
-                            min(
-                                random_treasure_pos[1] + self.set_trap_range,
-                                self.grid_size,
-                            ),
-                        ),
-                    )
-                else:
-                    trap_pos = (
-                        self.rand.randrange(self.grid_size),
-                        self.rand.randrange(self.grid_size),
-                    )
+                trap_range = (
+                    self.set_trap_range if self.set_trap_range > 0 else self.grid_size
+                )
+                trap_pos = (
+                    self.rand.randrange(
+                        max(random_treasure_pos[0] - trap_range, 0),
+                        min(random_treasure_pos[0] + trap_range, self.grid_size),
+                    ),
+                    self.rand.randrange(
+                        max(random_treasure_pos[1] - trap_range, 0),
+                        min(random_treasure_pos[1] + trap_range, self.grid_size),
+                    ),
+                )
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
                 trap_count += 1
@@ -543,7 +561,9 @@ class GridApp:
         start_time = time.time()
 
         minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
-        node, expansions, pruning_ratio = minimax.search(limit=self.minimax_depth, prune=use_pruning, max_iterations=100)
+        node, expansions, pruning_ratio = minimax.search(
+            limit=self.minimax_depth, prune=use_pruning, max_iterations=100
+        )
 
         end_time = time.time()
 
@@ -804,7 +824,7 @@ class GridApp:
         print(f"  - Moves: {len(path_history)}")
         print(f"  - Final Entropy: {final_entropy:.4f}")
 
-        print('\nfalse positive/negative table:', *bg.false_table, sep='\n')
+        print("\nfalse positive/negative table:", *bg.false_table, sep="\n")
 
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
 
