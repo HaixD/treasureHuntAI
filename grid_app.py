@@ -78,7 +78,7 @@ class GridApp:
                 self.set_second_start = None
                 self.set_treasure_total = 4
                 self.set_treasure_pos = []
-                self.set_trap_total = 12
+                self.set_trap_total = 16
                 self.set_trap_pos = []
                 self.set_trap_range = 1
                 self.set_wall_total = 20
@@ -88,7 +88,7 @@ class GridApp:
                 self.set_second_start = None
                 self.set_treasure_total = 3
                 self.set_treasure_pos = []
-                self.set_trap_total = 12
+                self.set_trap_total = 18
                 self.set_trap_pos = []
                 self.set_trap_range = 2
                 self.set_wall_total = 20
@@ -355,6 +355,7 @@ class GridApp:
                     self.rand.randrange(self.grid_size),
                     self.rand.randrange(self.grid_size),
                 )
+
             if grid[treasure_pos] == Cell.EMPTY:
                 grid[treasure_pos] = Cell.TREASURE
                 self.treasure_pos.append(treasure_pos)
@@ -362,25 +363,52 @@ class GridApp:
 
         # Place traps
         trap_count = 0
+        max_attempts_per_trap = 100
         while trap_count < self.trap_total:
             if self.set_trap_pos is not None and trap_count < len(self.set_trap_pos):
                 cur_trap_pos = self.set_trap_pos[trap_count]
                 trap_pos = (cur_trap_pos[0], cur_trap_pos[1])
             else:
-                random_treasure_pos = random.choice(self.treasure_pos)
-                trap_range = (
-                    self.set_trap_range if self.set_trap_range > 0 else self.grid_size
-                )
-                trap_pos = (
-                    self.rand.randrange(
-                        max(random_treasure_pos[0] - trap_range, 0),
-                        min(random_treasure_pos[0] + trap_range, self.grid_size),
-                    ),
-                    self.rand.randrange(
-                        max(random_treasure_pos[1] - trap_range, 0),
-                        min(random_treasure_pos[1] + trap_range, self.grid_size),
-                    ),
-                )
+                # Try to place near a treasure
+                placed = False
+                for attempt in range(max_attempts_per_trap):
+                    random_treasure_pos = random.choice(self.treasure_pos)
+
+                    # Expand range if failing to place
+                    trap_range = (
+                        self.set_trap_range
+                        if self.set_trap_range > 0
+                        else self.grid_size
+                    )
+                    if attempt >= max_attempts_per_trap // 2:
+                        trap_range += 1
+
+                    trap_pos = (
+                        self.rand.randrange(
+                            max(random_treasure_pos[0] - trap_range, 0),
+                            min(
+                                random_treasure_pos[0] + trap_range + 1, self.grid_size
+                            ),
+                        ),
+                        self.rand.randrange(
+                            max(random_treasure_pos[1] - trap_range, 0),
+                            min(
+                                random_treasure_pos[1] + trap_range + 1, self.grid_size
+                            ),
+                        ),
+                    )
+
+                    if grid[trap_pos] == Cell.EMPTY:
+                        placed = True
+                        break
+
+                if not placed:
+                    # Skip placing trap
+                    print(
+                        f"WARNING: Could only place {trap_count} of {self.trap_total} traps"
+                    )
+                    break
+
             if grid[trap_pos] == Cell.EMPTY:
                 grid[trap_pos] = Cell.TRAP
                 trap_count += 1
@@ -391,6 +419,7 @@ class GridApp:
             r, c = self.rand.randrange(self.grid_size), self.rand.randrange(
                 self.grid_size
             )
+
             if grid[r, c] == Cell.EMPTY:
                 grid[r, c] = Cell.WALL
                 wall_count += 1
@@ -404,8 +433,10 @@ class GridApp:
                     self.rand.randrange(self.grid_size),
                     self.rand.randrange(self.grid_size),
                 )
+
                 if first_start_pos not in [Cell.TREASURE, Cell.TRAP]:
                     break
+
         grid[first_start_pos] = Cell.START
         self.first_start_pos = first_start_pos
 
