@@ -12,13 +12,15 @@ from algorithms import a_star
 from constants import Cell
 from utils import euclidean_distance, get_neighbors
 
+
 @dataclass
 class Agent:
     position: tuple[int, int]
-    current_goal: tuple[int, int] # treasure that agent wants to reach first
+    current_goal: tuple[int, int]  # treasure that agent wants to reach first
 
     treasures: int = 0
     traps: int = 0
+
 
 class Minimax:
     """Adversarial search using Minimax algorithm with optional alpha-beta pruning.
@@ -36,14 +38,24 @@ class Minimax:
     """
 
     class Node:
-        def __init__(self, state:"Minimax|tuple", *, parent:"Minimax.Node|None"=None, is_partial=False):
+        def __init__(
+            self,
+            state: "Minimax|tuple",
+            *,
+            parent: "Minimax.Node|None" = None,
+            is_partial=False,
+        ):
             self.state = state
             self.value = None
             self.parent = parent
             self.children = []
             self.depth = 0 if parent is None else parent.depth + 1
             self.expanded = False
-            self.debug = {"expansions": 0, "actual_expansions": 0, "total_possible_expansions": 0}
+            self.debug = {
+                "expansions": 0,
+                "actual_expansions": 0,
+                "total_possible_expansions": 0,
+            }
 
             if not is_partial:
                 self.generate_value()
@@ -75,9 +87,7 @@ class Minimax:
             agent = self.state.agents[self.get_agent_index()]
             other = self.state.agents[self.get_agent_index(True)]
 
-            valid_moves = get_neighbors(
-                grid, agent.position, include_traps=True
-            )
+            valid_moves = get_neighbors(grid, agent.position, include_traps=True)
             for move in valid_moves:
                 if move == other.position:
                     continue
@@ -92,7 +102,10 @@ class Minimax:
 
             self_value = (MAX_value, MIN_value)[self.get_agent_index()]
 
-            self.value = (MAX_value * abs(MAX_value) - MIN_value * abs(MIN_value), self_value)
+            self.value = (
+                MAX_value * abs(MAX_value) - MIN_value * abs(MIN_value),
+                self_value,
+            )
             # self.value = (MAX_value - MIN_value, 0)
             self.debug["expansions"] = cells_expanded1 + cells_expanded2
 
@@ -123,8 +136,8 @@ class Minimax:
             self.debug["total_possible_expansions"] = 0
 
             def dfs(node, alpha=None, beta=None):
-                alpha = alpha or (-float('inf'), 0)
-                beta = beta or (float('inf'), 0)
+                alpha = alpha or (-float("inf"), 0)
+                beta = beta or (float("inf"), 0)
 
                 if (node.expanded and node.is_leaf()) or (
                     node.depth == self.depth + limit - 1
@@ -172,11 +185,19 @@ class Minimax:
             agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                next_node = max(self.children,
-                                key=lambda node: node.value if node.value is not None else (-float('inf'), 0))
+                next_node = max(
+                    self.children,
+                    key=lambda node: (
+                        node.value if node.value is not None else (-float("inf"), 0)
+                    ),
+                )
             else:
-                next_node = min(self.children,
-                                key=lambda node: node.value if node.value is not None else (float('inf'), 0))
+                next_node = min(
+                    self.children,
+                    key=lambda node: (
+                        node.value if node.value is not None else (float("inf"), 0)
+                    ),
+                )
 
             next_node.expanded = False
             next_node.children = []
@@ -193,7 +214,7 @@ class Minimax:
         """
         self.grid = grid
         self.paths = ([], [])
-        self.length_cache = {} # length_cache[treasure_pos][pos] = cached length
+        self.length_cache = {}  # length_cache[treasure_pos][pos] = cached length
 
         # initialize treasures
         self.treasures = set()
@@ -203,7 +224,10 @@ class Minimax:
                     self.treasures.add((r, c))
 
         # initialize agents
-        self.agents = (Agent(start_pos1, (-1, -1)), Agent(start_pos2, (-1, -1))) # PLACEHOLDER
+        self.agents = (
+            Agent(start_pos1, (-1, -1)),
+            Agent(start_pos2, (-1, -1)),
+        )  # PLACEHOLDER
         self.update_treasures()
 
     def __str__(self):
@@ -220,15 +244,17 @@ class Minimax:
         for treasure in self.treasures:
             grid[*treasure] = 2
 
-        agent1_char = chr(ord('A') + self.agents[0].treasures)
-        agent2_char = chr(ord('Z') - self.agents[1].treasures)
+        agent1_char = chr(ord("A") + self.agents[0].treasures)
+        agent2_char = chr(ord("Z") - self.agents[1].treasures)
 
         text = str(grid)
-        text = (text.replace("0", " ")
-                .replace("8", agent1_char)
-                .replace("9", agent2_char)
-                .replace(str(Cell.WALL), "#")
-                .replace(str(Cell.TRAP), "@"))
+        text = (
+            text.replace("0", " ")
+            .replace("8", agent1_char)
+            .replace("9", agent2_char)
+            .replace(str(Cell.WALL), "#")
+            .replace(str(Cell.TRAP), "@")
+        )
 
         return text
 
@@ -245,15 +271,21 @@ class Minimax:
     # consider get_best_treasure where treasure quality = other agent distance - given agent distance to treasure
     def get_cloest_treasure(self, agent_index):
         other_index = (agent_index + 1) % 2
-        shortest = (float('inf'), (0, 0), 0) # (length, position, cells expanded)
+        shortest = (float("inf"), (0, 0), 0)  # (length, position, cells expanded)
         for treasure in self.treasures:
-            self_length, cells_expanded1 = self.get_a_star_length(self.agents[agent_index].position, treasure)
-            other_length, cells_expanded2 = self.get_a_star_length(self.agents[other_index].position, treasure)
+            self_length, cells_expanded1 = self.get_a_star_length(
+                self.agents[agent_index].position, treasure
+            )
+            other_length, cells_expanded2 = self.get_a_star_length(
+                self.agents[other_index].position, treasure
+            )
 
             length = self_length - other_length
             cells_expanded = cells_expanded1 + cells_expanded2
 
-            shortest = min(shortest, (length, treasure, cells_expanded), key=lambda x : x[0])
+            shortest = min(
+                shortest, (length, treasure, cells_expanded), key=lambda x: x[0]
+            )
 
         return shortest[1:]
 
@@ -279,7 +311,7 @@ class Minimax:
             self.agents[1].position,
         )
         copied.grid = self.grid
-        copied.agents= deepcopy(self.agents)
+        copied.agents = deepcopy(self.agents)
         copied.treasures = set(treasure for treasure in self.treasures)
         copied.paths = deepcopy(self.paths)
         copied.length_cache = self.length_cache
@@ -316,11 +348,13 @@ class Minimax:
 
             return 0, 0
 
-        distance, cells_expanded = self.get_a_star_length(agent.position, agent.current_goal)
+        distance, cells_expanded = self.get_a_star_length(
+            agent.position, agent.current_goal
+        )
 
         distance_score = -distance * 0.5
         treasure_score = agent.treasures * 500
-        trap_score = -agent.traps * 5 # BUGGED
+        trap_score = -agent.traps * 5  # BUGGED
 
         total_score = distance_score + treasure_score + trap_score
 
@@ -351,7 +385,7 @@ class Minimax:
 
             return (
                 total_actual + root.debug.get("actual_expansions", 0),
-                total_possible + root.debug.get("total_possible_expansions", 0)
+                total_possible + root.debug.get("total_possible_expansions", 0),
             )
 
         actual_expansions, total_possible_expansions = get_expansions(root)
@@ -478,6 +512,7 @@ if __name__ == "__main__":
     # node, _ =  minimax2.search(limit=5, prune=False)
 
     # test 3
+    # fmt: off
     grid3 = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
@@ -498,12 +533,14 @@ if __name__ == "__main__":
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0,],
                       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,],])
+    # fmt: on
     minimax3 = Minimax(grid3, (10, 18), (6, 18))
 
-    print(minimax3, end='\n\n')
+    print(minimax3, end="\n\n")
     node, _ = minimax3.search(limit=3, prune=False, max_iterations=101)
 
     # test 4
+    # fmt: off
     grid4 = np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
@@ -524,6 +561,7 @@ if __name__ == "__main__":
                       [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
                       [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],])
+    # fmt: on
     minimax4 = Minimax(grid4, (14, 15), (6, 1))
 
     # print(minimax4, end='\n\n')
