@@ -151,10 +151,8 @@ class Minimax:
             agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                print(list(map(lambda node: node.value, self.children)), agent_index)
                 next_node = max(self.children, key=lambda node: node.value if node.value is not None else -float('inf'))
             else:
-                print(list(map(lambda node: node.value, self.children)), agent_index)
                 next_node = min(self.children, key=lambda node: node.value if node.value is not None else float('inf'))
 
             next_node.expanded = False
@@ -313,7 +311,6 @@ class Minimax:
                 break
             curr.alpha_beta_minimax(limit, prune)
             curr = curr.get_next_node()
-            print(curr.state, end='\n\n')
 
         def get_expansions(root):
             """Recursively count total expansions in the tree."""
