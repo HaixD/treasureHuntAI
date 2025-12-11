@@ -35,7 +35,7 @@ class Minimax2:
             return len(self.children) == 0
 
         def get_agent_index(self, swap=False):
-            return (self.depth + swap) % 2 == 0
+            return (self.depth + swap) % 2
 
         def shallow_expand(self):
             if self.expanded:
@@ -57,13 +57,9 @@ class Minimax2:
             self.expanded = True
 
         def generate_value(self):
-            # player, cells_expanded1 = self.state.get_utility_value_expansions(self.get_agent_index())
-            # other, cells_expanded2 = self.state.get_utility_value_expansions(self.get_agent_index(True))
-            
             MAX_value, cells_expanded1 = self.state.get_utility_value_expansions(0)
             MIN_value, cells_expanded2 = self.state.get_utility_value_expansions(1)
 
-            # self.value = player - other
             self.value = MAX_value - MIN_value
             self.debug["expansions"] = cells_expanded1 + cells_expanded2
 
@@ -119,10 +115,10 @@ class Minimax2:
             agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                print(list(map(lambda node: node.value, self.children)))
+                print(list(map(lambda node: node.value, self.children)), agent_index)
                 next_node = max(self.children, key=lambda node: node.value if node.value is not None else -float('inf'))
             else:
-                print(list(map(lambda node: node.value, self.children)))
+                print(list(map(lambda node: node.value, self.children)), agent_index)
                 next_node = min(self.children, key=lambda node: node.value if node.value is not None else float('inf'))
 
             next_node.expanded = False
@@ -156,23 +152,38 @@ class Minimax2:
             grid[*treasure] = 2
 
         agent1_char = chr(ord('A') + self.agents[0].treasures)
-        agent2_char = chr(ord('Z') + self.agents[1].treasures)
+        agent2_char = chr(ord('Z') - self.agents[1].treasures)
 
         text = str(grid)
-        text = text.replace("0", " ").replace("8", agent1_char).replace("9", agent2_char)
+        text = (text.replace("0", " ")
+                .replace("8", agent1_char)
+                .replace("9", agent2_char)
+                .replace(str(Cell.WALL), "#")
+                .replace(str(Cell.TRAP), "@"))
 
         return text
     
     def update_treasures(self):
+        total_expansions = 0
+        
         for i, agent in enumerate(self.agents):
             if agent.current_goal not in self.treasures:
                 agent.current_goal, cells_expanded = self.get_cloest_treasure(i)
+                total_expansions += cells_expanded
+        
+        return total_expansions
 
     # consider get_best_treasure where treasure quality = other agent distance - given agent distance to treasure
     def get_cloest_treasure(self, agent_index):
+        other_index = (agent_index + 1) % 2
         shortest = (float('inf'), (0, 0), 0) # (length, position, cells expanded)
         for treasure in self.treasures:
-            length, cells_expanded = self.get_a_star_length(self.agents[agent_index].position, treasure)
+            self_length, cells_expanded1 = self.get_a_star_length(self.agents[agent_index].position, treasure)
+            other_length, cells_expanded2 = self.get_a_star_length(self.agents[other_index].position, treasure)
+
+            length = self_length - other_length
+            cells_expanded = cells_expanded1 + cells_expanded2
+            
             shortest = min(shortest, (length, treasure, cells_expanded), key=lambda x : x[0])
 
         return shortest[1:]
@@ -232,7 +243,7 @@ class Minimax2:
 
         distance_score = -distance * 0.5
         treasure_score = agent.treasures * 10
-        trap_score = -agent.traps * 5
+        trap_score = -agent.traps * 5 * 0 # BUGGED
 
         total_score = distance_score + treasure_score + trap_score
 
@@ -245,7 +256,7 @@ class Minimax2:
         root = Minimax2.Node(self.copy())
         curr = root
 
-        for _ in range(max_iterations - 1):
+        for _ in range(max_iterations):
             if not curr.state.treasures:
                 break
             curr.alpha_beta_minimax(limit, prune)
@@ -294,15 +305,57 @@ class Minimax2:
 
 
 if __name__ == "__main__":
-    grid = np.array(
-        [
-            [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ],
-        dtype=int,
-    )
-    minimax = Minimax2(grid, (3, 8), (3, len(grid[0]) - 1))
-    print(minimax, end='\n\n')
-    node, _ = minimax.search(prune=True)
+    from random import randint, choice, seed
+
+    seed(0)
+    
+    def place_random(grid, value):
+        h, w = grid.shape
+
+        while True:
+            position = randint(0, h - 1), randint(0, w - 1)
+            if grid[position] != value:
+                break
+        grid[position] = value
+
+    def place_around(grid, position, value):
+        h, w = grid.shape
+        options = [
+            (position[0] - 1, position[1]),
+            (position[0] + 1, position[1]),
+            (position[0], position[1] - 1),
+            (position[0], position[1] + 1),
+        ]
+        for position in options.copy():
+            for coordinate in position:
+                if not 0 <= coordinate < h or grid[position] == value:
+                    options.remove(position)
+                    break
+
+        grid[choice(options)] = value
+    
+    # prompt 1
+    grid1 = np.array([[0] * 15 for _ in range(15)], dtype=int)
+    grid1[7, 7] = Cell.TREASURE
+
+    for i in range(10):
+        if i < 6:
+            place_random(grid1, Cell.TRAP)
+        place_random(grid1, Cell.WALL)
+    minimax1 = Minimax2(grid1, (1, 1), (13, 13))
+    # print(minimax1, end='\n\n')
+    # minimax1.search(limit=4, prune=True)
+
+    # prompt 2
+    grid2 = np.array([[0] * 15 for _ in range(15)], dtype=int)
+    treasures = [(6, 5), (7, 10), (10, 8)]
+    for pos in treasures:
+        grid2[pos] = Cell.TREASURE
+        for _ in range(2):
+            place_around(grid2, pos, Cell.TRAP)
+    for _ in range(10):
+        place_random(grid2, Cell.WALL)
+    
+    minimax2 = Minimax2(grid2, (2, 12), (12, 2))
+    print(minimax2, end='\n\n')
+    node, _ =  minimax2.search(limit=5, prune=False)
