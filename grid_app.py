@@ -573,7 +573,7 @@ class GridApp:
         root = node
         while root.parent is not None:
             root = root.parent
-        Minimax.print_tree(minimax, root)
+        # Minimax.print_tree(minimax, root)
 
     def run_search_algorithm(self, algorithm):
         """Execute and visualize the specified search algorithm.
