@@ -13,9 +13,9 @@ class Agent:
     treasures: int = 0
     traps: int = 0
 
-class Minimax2:
+class Minimax:
     class Node:
-        def __init__(self, state:"Minimax2|tuple", *, parent:"Minimax2.Node|None"=None, is_partial=False):
+        def __init__(self, state:"Minimax|tuple", *, parent:"Minimax.Node|None"=None, is_partial=False):
             self.state = state
             self.value = None
             self.parent = parent
@@ -50,7 +50,7 @@ class Minimax2:
             for move in valid_moves:
                 if move == other.position:
                     continue
-                child = Minimax2.Node(move, parent=self, is_partial=True)
+                child = Minimax.Node(move, parent=self, is_partial=True)
                 self.children.append(child)
 
             self.expanded = True
@@ -203,7 +203,7 @@ class Minimax2:
         return self.length_cache[goal][start], expanded_cells
 
     def copy(self):
-        copied = Minimax2(
+        copied = Minimax(
             np.zeros((0, 0), dtype=int),
             self.agents[0].position,
             self.agents[1].position,
@@ -252,7 +252,7 @@ class Minimax2:
         return self.get_utility_value_expansions(agent_index)[0]
 
     def search(self, limit=5, prune=False, max_iterations=10000):
-        root = Minimax2.Node(self.copy())
+        root = Minimax.Node(self.copy())
         curr = root
 
         for _ in range(max_iterations):
@@ -273,7 +273,7 @@ class Minimax2:
 
     def search_increment(self, state=None, *, limit=5, prune=False, move=None):
         state = state or {
-            "curr": Minimax2.Node(self.copy()),
+            "curr": Minimax.Node(self.copy()),
             "limit": limit,
             "prune": prune,
         }
@@ -341,7 +341,7 @@ if __name__ == "__main__":
         if i < 6:
             place_random(grid1, Cell.TRAP)
         place_random(grid1, Cell.WALL)
-    minimax1 = Minimax2(grid1, (1, 1), (13, 13))
+    minimax1 = Minimax(grid1, (1, 1), (13, 13))
     # print(minimax1, end='\n\n')
     # minimax1.search(limit=4, prune=True)
 
@@ -355,6 +355,6 @@ if __name__ == "__main__":
     for _ in range(10):
         place_random(grid2, Cell.WALL)
     
-    minimax2 = Minimax2(grid2, (2, 12), (12, 2))
+    minimax2 = Minimax(grid2, (2, 12), (12, 2))
     print(minimax2, end='\n\n')
     node, _ =  minimax2.search(limit=5, prune=False)
