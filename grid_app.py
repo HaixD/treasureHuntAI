@@ -542,7 +542,7 @@ class GridApp:
         start_time = time.time()
 
         minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
-        node, expansions = minimax.search(limit=self.minimax_depth, prune=use_pruning)
+        node, expansions = minimax.search(limit=self.minimax_depth, prune=use_pruning, max_iterations=100)
 
         end_time = time.time()
 

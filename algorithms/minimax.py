@@ -89,8 +89,11 @@ class Minimax:
         def generate_value(self):
             MAX_value, cells_expanded1 = self.state.get_utility_value_expansions(0)
             MIN_value, cells_expanded2 = self.state.get_utility_value_expansions(1)
+            
+            self_value = (MAX_value, MIN_value)[self.get_agent_index()]
 
-            self.value = MAX_value - MIN_value
+            self.value = (MAX_value * abs(MAX_value) - MIN_value * abs(MIN_value), self_value)
+            # self.value = (MAX_value - MIN_value, 0)
             self.debug["expansions"] = cells_expanded1 + cells_expanded2
 
         def build_node(self, build_value=False):
@@ -116,7 +119,10 @@ class Minimax:
                     self.generate_value()
 
         def alpha_beta_minimax(self, limit, prune=False):
-            def dfs(node, alpha=-float('inf'), beta=float('inf')):
+            def dfs(node, alpha=None, beta=None):
+                alpha = alpha or (-float('inf'), 0)
+                beta = beta or (float('inf'), 0)
+                
                 if (node.expanded and node.is_leaf()) or (
                     node.depth == self.depth + limit - 1
                 ):
@@ -151,9 +157,13 @@ class Minimax:
             agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                next_node = max(self.children, key=lambda node: node.value if node.value is not None else -float('inf'))
+                next_node = max(self.children, 
+                                key=lambda node: node.value if node.value is not None else (-float('inf'), 0))
             else:
-                next_node = min(self.children, key=lambda node: node.value if node.value is not None else float('inf'))
+                next_node = min(self.children, 
+                                key=lambda node: node.value if node.value is not None else (float('inf'), 0))
+            
+            print(agent_index, list(map(lambda node : node.value, self.children)))
 
             next_node.expanded = False
             next_node.children = []
@@ -292,15 +302,15 @@ class Minimax:
         distance, cells_expanded = self.get_a_star_length(agent.position, agent.current_goal)
 
         distance_score = -distance * 0.5
-        treasure_score = agent.treasures * 10
-        trap_score = -agent.traps * 5 * 0 # BUGGED
+        treasure_score = agent.treasures * 500
+        trap_score = -agent.traps * 5 # BUGGED
 
         total_score = distance_score + treasure_score + trap_score
 
         return total_score, cells_expanded
     
-    def get_utility_value(self, agent_index):
-        return self.get_utility_value_expansions(agent_index)[0]
+    def get_utility_value(self, *args, **kwargs):
+        return self.get_utility_value_expansions(*args, **kwargs)[0]
 
     def search(self, limit=5, prune=False, max_iterations=10000):
         root = Minimax.Node(self.copy())
@@ -311,6 +321,7 @@ class Minimax:
                 break
             curr.alpha_beta_minimax(limit, prune)
             curr = curr.get_next_node()
+            print(curr.state, end='\n\n')
 
         def get_expansions(root):
             """Recursively count total expansions in the tree."""
@@ -366,7 +377,7 @@ class Minimax:
             depth (int, optional): Current depth in the tree. Defaults to 0.
         """
         rows = ["  " * depth + row for row in str(node.state).split("\n")]
-        rows[0] += f" {round(node.value, 2)}"
+        rows[0] += f" {round(node.value[0], 2)}"
         text = "\n".join(rows)
 
         print(text, end="\n\n")
@@ -407,7 +418,7 @@ if __name__ == "__main__":
 
         grid[choice(options)] = value
     
-    # prompt 1
+    # test 1
     grid1 = np.array([[0] * 15 for _ in range(15)], dtype=int)
     grid1[7, 7] = Cell.TREASURE
 
@@ -419,7 +430,7 @@ if __name__ == "__main__":
     # print(minimax1, end='\n\n')
     # minimax1.search(limit=4, prune=True)
 
-    # prompt 2
+    # test 2
     grid2 = np.array([[0] * 15 for _ in range(15)], dtype=int)
     treasures = [(6, 5), (7, 10), (10, 8)]
     for pos in treasures:
@@ -430,5 +441,57 @@ if __name__ == "__main__":
         place_random(grid2, Cell.WALL)
     
     minimax2 = Minimax(grid2, (2, 12), (12, 2))
-    print(minimax2, end='\n\n')
-    node, _ =  minimax2.search(limit=5, prune=False)
+    # print(minimax2, end='\n\n')
+    # node, _ =  minimax2.search(limit=5, prune=False)
+
+    # test 3
+    grid3 = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0,],
+                      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,],])
+    minimax3 = Minimax(grid3, (10, 18), (6, 18))
+
+    print(minimax3, end='\n\n')
+    node, _ = minimax3.search(limit=3, prune=False, max_iterations=101)
+
+    # test 4
+    grid4 = np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,],
+                      [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 4, 0,],
+                      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],])
+    minimax4 = Minimax(grid4, (14, 15), (6, 1))
+
+    # print(minimax4, end='\n\n')
+    # node, _ = minimax4.search(limit=3, prune=False, max_iterations=100)
