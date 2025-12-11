@@ -58,6 +58,7 @@ class BeliefGrid:
         self.prior = 1.0 / (len(self.grid) * len(self.grid[0]))
 
         self.beliefs = [[self.prior] * len(grid[0]) for _ in range(len(grid))]
+        self.false_table = [[0] * len(grid[0]) for _ in range(len(grid))]
 
     def scan(self, position):
         """Perform a noisy sensor scan at the given position and update beliefs.
@@ -75,11 +76,13 @@ class BeliefGrid:
 
         if self.grid[r][c] == Cell.TREASURE:
             if self.rand.randint(1, 100) / 100 <= self.false_negative:
+                self.false_table[r][c] += 1
                 self.update_posterior(position, self.false_negative, true_negative)
             else:
                 self.update_posterior(position, true_positive, self.false_positive)
         else:
             if self.rand.randint(1, 100) / 100 <= self.false_positive:
+                self.false_table[r][c] += 1
                 self.update_posterior(position, self.false_positive, true_positive)
             else:
                 self.update_posterior(position, true_negative, self.false_negative)

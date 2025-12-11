@@ -804,6 +804,8 @@ class GridApp:
         print(f"  - Moves: {len(path_history)}")
         print(f"  - Final Entropy: {final_entropy:.4f}")
 
+        print('\nfalse positive/negative table:', *bg.false_table, sep='\n')
+
         self.animate_path(path_history, scans, execution_time, f"Bayes ({noise_level})")
 
     def get_path_score(self, path):
