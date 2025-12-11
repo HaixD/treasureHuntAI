@@ -180,12 +180,12 @@ class GridApp:
         tk.Button(
             button_frame,
             text="Minimax",
-            command=lambda: self.run_search_algorithm("Minimax (No Pruning)"),
+            command=lambda: self.run_search_algorithm("Minimax"),
         ).grid(row=2, column=1, padx=5, pady=3)
         tk.Button(
             button_frame,
             text="Alpha-Beta",
-            command=lambda: self.run_search_algorithm("Minimax (With Pruning)"),
+            command=lambda: self.run_search_algorithm("Alpha-Beta"),
         ).grid(row=2, column=2, padx=5, pady=3)
 
         # Row 4: Bayesian search
@@ -204,6 +204,7 @@ class GridApp:
             text="Bayes (High Noise)",
             command=lambda: self.run_bayesian_agent("High"),
         ).grid(row=3, column=3, padx=5, pady=3)
+
         # Frame for Minimax depth slider
         depth_frame = tk.Frame(self.root)
         depth_frame.pack(pady=(0, 10))
@@ -542,7 +543,7 @@ class GridApp:
         start_time = time.time()
 
         minimax = Minimax(self.grid, self.first_start_pos, self.second_start_pos)
-        node, expansions = minimax.search(limit=self.minimax_depth, prune=use_pruning, max_iterations=100)
+        node, expansions, pruning_ratio = minimax.search(limit=self.minimax_depth, prune=use_pruning, max_iterations=100)
 
         end_time = time.time()
 
@@ -558,13 +559,6 @@ class GridApp:
             winner = paths.index(min(paths, key=len))
         else:
             winner = [0, 1]
-
-        pruning_ratio = None
-        if use_pruning:
-            _, expansions_no_prune = minimax.search(
-                limit=self.minimax_depth, prune=False
-            )
-            pruning_ratio = np.round(expansions / expansions_no_prune, 2)
 
         self.animate_adversarial_path(
             winner,
@@ -590,11 +584,11 @@ class GridApp:
         if self.is_animating:
             return
 
-        if algorithm.lower() == "minimax (no pruning)":
+        if algorithm.lower() == "minimax":
             self.run_minimax(use_pruning=False)
             return
 
-        if algorithm.lower() == "minimax (with pruning)":
+        if algorithm.lower() == "alpha-beta":
             self.run_minimax(use_pruning=True)
             return
 

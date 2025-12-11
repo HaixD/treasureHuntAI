@@ -43,7 +43,7 @@ class Minimax:
             self.children = []
             self.depth = 0 if parent is None else parent.depth + 1
             self.expanded = False
-            self.debug = {"expansions": 0}
+            self.debug = {"expansions": 0, "actual_expansions": 0, "total_possible_expansions": 0}
 
             if not is_partial:
                 self.generate_value()
@@ -89,7 +89,7 @@ class Minimax:
         def generate_value(self):
             MAX_value, cells_expanded1 = self.state.get_utility_value_expansions(0)
             MIN_value, cells_expanded2 = self.state.get_utility_value_expansions(1)
-            
+
             self_value = (MAX_value, MIN_value)[self.get_agent_index()]
 
             self.value = (MAX_value * abs(MAX_value) - MIN_value * abs(MIN_value), self_value)
@@ -119,10 +119,13 @@ class Minimax:
                     self.generate_value()
 
         def alpha_beta_minimax(self, limit, prune=False):
+            self.debug["actual_expansions"] = 0
+            self.debug["total_possible_expansions"] = 0
+
             def dfs(node, alpha=None, beta=None):
                 alpha = alpha or (-float('inf'), 0)
                 beta = beta or (float('inf'), 0)
-                
+
                 if (node.expanded and node.is_leaf()) or (
                     node.depth == self.depth + limit - 1
                 ):
@@ -136,18 +139,30 @@ class Minimax:
 
                 if agent_index == 0:
                     for child in node.children:
+                        node.debug["total_possible_expansions"] += 1
+
+                        if prune and alpha >= beta:
+                            break  # Prune
+
+                        # Expand this child
+                        node.debug["actual_expansions"] += 1
                         v = dfs(child, alpha, beta) if prune else dfs(child)
                         alpha = max(alpha, v)
-                        if prune and alpha >= beta:
-                            break
+
                     node.value = alpha
                     return alpha
                 else:
                     for child in node.children:
+                        node.debug["total_possible_expansions"] += 1
+
+                        if prune and beta <= alpha:
+                            break  # Prune
+
+                        # Expand this child
+                        node.debug["actual_expansions"] += 1
                         v = dfs(child, alpha, beta) if prune else dfs(child)
                         beta = min(beta, v)
-                        if prune and beta <= alpha:
-                            break
+
                     node.value = beta
                     return beta
 
@@ -157,12 +172,12 @@ class Minimax:
             agent_index = self.get_agent_index()
 
             if agent_index == 0:
-                next_node = max(self.children, 
+                next_node = max(self.children,
                                 key=lambda node: node.value if node.value is not None else (-float('inf'), 0))
             else:
-                next_node = min(self.children, 
+                next_node = min(self.children,
                                 key=lambda node: node.value if node.value is not None else (float('inf'), 0))
-            
+
             print(agent_index, list(map(lambda node : node.value, self.children)))
 
             next_node.expanded = False
@@ -218,15 +233,15 @@ class Minimax:
                 .replace(str(Cell.TRAP), "@"))
 
         return text
-    
+
     def update_treasures(self):
         total_expansions = 0
-        
+
         for i, agent in enumerate(self.agents):
             if agent.current_goal not in self.treasures:
                 agent.current_goal, cells_expanded = self.get_cloest_treasure(i)
                 total_expansions += cells_expanded
-        
+
         return total_expansions
 
     # consider get_best_treasure where treasure quality = other agent distance - given agent distance to treasure
@@ -239,24 +254,24 @@ class Minimax:
 
             length = self_length - other_length
             cells_expanded = cells_expanded1 + cells_expanded2
-            
+
             shortest = min(shortest, (length, treasure, cells_expanded), key=lambda x : x[0])
 
         return shortest[1:]
 
     def get_a_star_length(self, start, goal):
-        if goal in self.length_cache: 
+        if goal in self.length_cache:
             if start in self.length_cache[goal]:
                 return self.length_cache[goal][start], 0
         else:
             self.length_cache[goal] = {}
-        
+
         path, expanded_cells = a_star(self.grid, start, goal, euclidean_distance)
 
         if path:
             for i, (_, position) in enumerate(path):
                 self.length_cache[goal][position] = len(path) - 1 - i
-        
+
         return self.length_cache[goal][start], expanded_cells
 
     def copy(self):
@@ -275,7 +290,7 @@ class Minimax:
 
     def apply_move(self, move, agent_index):
         cells_expanded = 0
-        
+
         if move in self.treasures:
             self.treasures.remove(move)
             self.agents[agent_index].treasures += 1
@@ -312,7 +327,7 @@ class Minimax:
         total_score = distance_score + treasure_score + trap_score
 
         return total_score, cells_expanded
-    
+
     def get_utility_value(self, *args, **kwargs):
         return self.get_utility_value_expansions(*args, **kwargs)[0]
 
@@ -327,16 +342,29 @@ class Minimax:
             curr = curr.get_next_node()
             print(curr.state, end='\n\n')
 
-        def get_expansions(node):
+        def get_expansions(root):
             """Recursively count total expansions in the tree."""
-            total = node.debug["expansions"]
+            total_actual = 0
+            total_possible = 0
 
-            for child in node.children:
-                total += get_expansions(child)
+            for child in root.children:
+                child_actual, child_possible = get_expansions(child)
+                total_actual += child_actual
+                total_possible += child_possible
 
-            return total
+            return (
+                total_actual + root.debug["expansions"] + root.debug.get("actual_expansions", 0),
+                total_possible + root.debug["expansions"] + root.debug.get("total_possible_expansions", 0)
+            )
 
-        return curr, get_expansions(root)
+        actual_expansions, total_possible_expansions = get_expansions(root)
+
+        # Calculate pruning ratio if pruning was used
+        pruning_ratio = None
+        if prune and total_possible_expansions > 0:
+            pruning_ratio = np.round(actual_expansions / total_possible_expansions, 2)
+
+        return curr, actual_expansions, pruning_ratio
 
     def search_increment(self, state=None, *, limit=5, prune=False, move=None):
         """Perform one incremental step of Minimax search.
@@ -397,7 +425,7 @@ if __name__ == "__main__":
     from random import randint, choice, seed
 
     seed(0)
-    
+
     def place_random(grid, value):
         h, w = grid.shape
 
@@ -422,7 +450,7 @@ if __name__ == "__main__":
                     break
 
         grid[choice(options)] = value
-    
+
     # test 1
     grid1 = np.array([[0] * 15 for _ in range(15)], dtype=int)
     grid1[7, 7] = Cell.TREASURE
@@ -444,7 +472,7 @@ if __name__ == "__main__":
             place_around(grid2, pos, Cell.TRAP)
     for _ in range(10):
         place_random(grid2, Cell.WALL)
-    
+
     minimax2 = Minimax(grid2, (2, 12), (12, 2))
     # print(minimax2, end='\n\n')
     # node, _ =  minimax2.search(limit=5, prune=False)
